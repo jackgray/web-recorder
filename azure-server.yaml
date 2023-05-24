@@ -1,0 +1,33 @@
+apiVersion: '2019-12-01'
+location: eastus
+name: file-share-demo
+properties:
+  containers:
+  - name: "${CONTAINER_NAME_SERVER}"
+    properties:
+      environmentVariables: []
+      image: "${DOCKER_IMAGE_SERVER}"
+      ports:
+      - port: 80
+      resources:
+        requests:
+          cpu: 1.0
+          memoryInGB: 1.5
+      volumeMounts:
+      - mountPath: /opt/
+        name: "${FILE_VOLUME_SHARE_NAME}"
+  osType: Linux
+  restartPolicy: Always
+  ipAddress:
+    type: Public
+    ports:
+      - port: 80
+    dnsNameLabel: "${DNS_NAME_LABEL_SERVER}"
+  volumes:
+  - name: "${FILE_VOLUME_SHARE_NAME}"
+    azureFile:
+      sharename: acishare
+      storageAccountName: "{$FILE_VOLUME_ACCOUNT_NAME}"
+      storageAccountKey: "${FILE_VOLUME_ACCOUNT_KEY}"
+tags: {}
+type: Microsoft.ContainerInstance/containerGroups
