@@ -91,51 +91,95 @@ app.get('/config/:filename', (req, res) => {
 });
 
 
-app.post("/uploads", upload.single("audio"), async (req, res) => {
-  console.log("Checking req: ", req)
-  console.log("Checking req.file: ", req.file)
-  const audioFile = req.file;
+// app.post("/uploads", async (req, res) => {
+//   console.log("Checking req: ", req)
+//   console.log("Checking req.file: ", req.file)
+//   const audioFile = req.file;
 
-  // Get the original file name, remove the extension, and add .mp3
-  const filename = path.parse(audioFile.originalname).name + '.mp3';
-  console.log("Filename: ", filename)
+//   const storage = multer.diskStorage({
+//     destination: function(req, file, cb) {
+//       destination: function(req, file, cb) {
+//         cb(null, '/app/data/audio');
+//       },
+//       filename: function(req, file, cb) {
+//         cb(null, file.originalname);
+//       }
+//     }
+//   });
 
-  const tempFilePath = audioFile.path;
-  const mp3OutputPath = `/app/data/uploads/${filename}`;
+//   const upload = multer({ storage: storage }).single('audio');
 
-  // Convert the WebM file to MP3
-  ffmpeg(tempFilePath)
-    .outputOptions("-c:a libmp3lame")
-    .toFormat("mp3")
-    .save(mp3OutputPath)
-    .on("end", () => {
-      // Send the MP3 file to the client
-      res.json({
-        filename: mp3OutputPath,
-        url: `/uploads/${filename}`
-      })
-      // fs.unlink(tempFilePath, (err) => {
-      //   if (err)
-      //     console.error("Error deleting the temp file:", err)
-      // });
-      // res.sendFile(path.resolve(mp3OutputPath), {}, (err) => {
-      //   if (err) {
-      //     console.error("Error sending the MP3 file:", err);
-      //     res.status(500).send({ error: "Error sending the MP3 file" });
-      //   } else {
-      //     // Delete the temporary WebM file and the MP3 file
-      //     fs.unlink(tempFilePath, (err) => {
-      //       if (err)
-      //         console.error("Error deleting the temporary WebM file:", err);
-      //     });
-      //   }
-      // });
-    })
-    .on("error", (err) => {
-      console.error("Error converting the audio file:", err);
-      res.status(500).send({ error: "Error converting the audio file" });
-    });
+//   upload(req, res, function(err) {
+//     if (err) {
+//       return res.status(500).json({ error: err.message });
+//     }
+
+//     res.status(200).json({ url: '/data/audio/' + req.file.originalname })
+//   })
+
+//   // Get the original file name, remove the extension, and add .mp3
+//   const filename = path.parse(audioFile.originalname).name + '.mp3';
+//   console.log("Filename: ", filename)
+
+//   const tempFilePath = audioFile.path;
+//   const mp3OutputPath = `/app/data/uploads/${filename}`;
+
+//   // Convert the WebM file to MP3
+//   ffmpeg(tempFilePath)
+//     .outputOptions("-c:a libmp3lame")
+//     .toFormat("mp3")
+//     .save(mp3OutputPath)
+//     .on("end", () => {
+//       // Send the MP3 file to the client
+//       res.json({
+//         filename: mp3OutputPath,
+//         url: `/uploads/${filename}`
+//       })
+//       // fs.unlink(tempFilePath, (err) => {
+//       //   if (err)
+//       //     console.error("Error deleting the temp file:", err)
+//       // });
+//       // res.sendFile(path.resolve(mp3OutputPath), {}, (err) => {
+//       //   if (err) {
+//       //     console.error("Error sending the MP3 file:", err);
+//       //     res.status(500).send({ error: "Error sending the MP3 file" });
+//       //   } else {
+//       //     // Delete the temporary WebM file and the MP3 file
+//       //     fs.unlink(tempFilePath, (err) => {
+//       //       if (err)
+//       //         console.error("Error deleting the temporary WebM file:", err);
+//       //     });
+//       //   }
+//       // });
+//     })
+//     .on("error", (err) => {
+//       console.error("Error converting the audio file:", err);
+//       res.status(500).send({ error: "Error converting the audio file" });
+//     });
+// });
+
+app.post('/uploads', async (req, res) => {
+  const storage = multer.diskStorage({
+    destination: function(req, file, cb) {
+      cb(null, '/app/data/audio');
+    },
+    filename: function(req, file, cb) {
+      cb(null, file.originalname);
+    },
+  });
+
+  const upload = multer({ storage: storage }).single('audio');
+
+  upload(req, res, function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    // Assuming your file is stored at /app/data/audio/filename.mp3
+    res.status(200).json({ url: '/data/audio/' + req.file.originalname });
+  });
 });
+
 
 
 let server;
