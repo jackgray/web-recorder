@@ -130,26 +130,30 @@ function App() {
       .then((response) => response.json())
       .then((config) => {
         // You have your configuration here
-        console.log(`setting server endpoint: ${config.SERVER_ENDPOINT}`)
+        console.log(`setting server endpoint: ${config.SERVER_ENDPOINT}`);
         setServerEndpoint(config.SERVER_ENDPOINT);
-        console.log(`Checking serverEndpoint state: ${serverEndpoint}`)
-        console.log(`Checking setServerEndpoint: ${setServerEndpoint}`)
+        console.log(`Checking serverEndpoint state: ${serverEndpoint}`);
+        console.log(`Checking setServerEndpoint: ${setServerEndpoint}`);
         setIsLoaded(true);
       });
   }, []);
 
   useEffect(() => {
-    console.log(`Checking serverEndpoint state inside config retreival: ${serverEndpoint}`)
-    console.log(`Checking setServerEndpoint inside config retrieval: ${setServerEndpoint}`)
+    console.log(
+      `Checking serverEndpoint state inside config retreival: ${serverEndpoint}`
+    );
+    console.log(
+      `Checking setServerEndpoint inside config retrieval: ${setServerEndpoint}`
+    );
 
     if (serverEndpoint) {
-      console.log("serverEndpoint var detected")
+      console.log("serverEndpoint var detected");
       fetch(`${serverEndpoint}/config/studyOptions.json`)
         .then((response) => {
           if (!response.ok) {
             throw new Error("Failed to fetch study options");
           }
-          console.log(response)
+          console.log(response);
           return response.json();
         })
         .then((data) => {
@@ -345,13 +349,13 @@ function App() {
 
       const blob = recorder.getBlob();
       const blobType = blob.type;
-      const blobExtension = blobType.split('/')[1];
-      const webfilename=filename+'.'+blobExtension;
-      console.log('using ', webfilename);
+      const blobExtension = blobType.split("/")[1];
+      const webfilename = filename + "." + blobExtension;
+      console.log("using ", webfilename);
       console.log(blob.type);
 
       const formData = new FormData();
-      formData.append("audio", blob, webfilename);
+      formData.append("audio", blob, "tmpfile");
       formData.append("subj", subj);
       formData.append("ses_type", sesType);
       formData.append("ses_num", String(sessionSliderValue).padStart(2, "0"));
@@ -361,11 +365,12 @@ function App() {
       formData.append("ver", selectedVer);
 
       try {
-        console.log("Fetching audio file from server (/uploads)")
+        console.log("Fetching audio file from server (/uploads)");
+        console.log(formData);
+        console.log(`Fetching from ${serverEndpoint}/uploads`);
         const response = await fetch(`${serverEndpoint}/uploads`, {
           method: "POST",
           body: formData,
-          credentials: "include",
         });
 
         if (response.ok) {
@@ -373,18 +378,18 @@ function App() {
           console.log("fetched json data: ", data);
           const mp3Download = serverEndpoint + data.url;
           console.log("Path to mp3 file: ", mp3Download);
-          const mp3Blob = await fetch(`${serverEndpoint}${data.url}`).then(res => res.blob());
+          const mp3Blob = await fetch(`mp3Download`).then((res) => res.blob());
 
           // Create a link to download the MP3 file
           const link = document.createElement("a");
           link.href = URL.createObjectURL(mp3Blob);
-          link.download = data.filename;
+          link.download = filename;
           link.click();
         } else {
           console.error("Error uploading the audio file.");
         }
       } catch (err) {
-        console.error("Error uploading audio:", err.stack);
+        console.error("DIDNT PASS SHIT---Error uploading audio:", err.stack);
       }
     });
     const scale_val = 0.8;
