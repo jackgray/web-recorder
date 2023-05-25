@@ -8,6 +8,7 @@ This app is comprised of two docker containers, and tested to work with Azure Co
 
 # Configuration
 In the storage volume that you mount, you will need to have the following folders and files:
+
 /config
 /ssl
 /audio

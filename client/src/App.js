@@ -342,12 +342,15 @@ function App() {
         selectedVer,
         selectedAcq
       );
-      const webfilename=filename+'.webm';
-      console.log('using ', webfilename);
-      const blob = recorder.getBlob();
-      console.log(blob.type);
-      const formData = new FormData();
 
+      const blob = recorder.getBlob();
+      const blobType = blob.type;
+      const blobExtension = blobType.split('/')[1];
+      const webfilename=filename+'.'+blobExtension;
+      console.log('using ', webfilename);
+      console.log(blob.type);
+
+      const formData = new FormData();
       formData.append("audio", blob, webfilename);
       formData.append("subj", subj);
       formData.append("ses_type", sesType);
@@ -358,6 +361,7 @@ function App() {
       formData.append("ver", selectedVer);
 
       try {
+        console.log("Fetching audio file from server (/uploads)")
         const response = await fetch(`${serverEndpoint}/uploads`, {
           method: "POST",
           body: formData,
@@ -365,18 +369,22 @@ function App() {
         });
 
         if (response.ok) {
-          const mp3Blob = await response.blob();
+          const data = await response.json();
+          console.log("fetched json data: ", data);
+          const mp3Download = serverEndpoint + data.url;
+          console.log("Path to mp3 file: ", mp3Download);
+          const mp3Blob = await fetch(`${serverEndpoint}${data.url}`).then(res => res.blob());
 
           // Create a link to download the MP3 file
           const link = document.createElement("a");
           link.href = URL.createObjectURL(mp3Blob);
-          link.download = filename;
+          link.download = data.filename;
           link.click();
         } else {
           console.error("Error uploading the audio file.");
         }
       } catch (err) {
-        console.error("Error uploading audio:", err);
+        console.error("Error uploading audio:", err.stack);
       }
     });
     const scale_val = 0.8;

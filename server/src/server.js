@@ -13,17 +13,6 @@ const fs = require("fs");
 const path = require("path");
 ffmpeg.setFfmpegPath(ffmpegPath);
 
-// const { exec } = require('child_process');
-// exec('ls /', (err, stdout, stderr) => {
-//   if (err) {
-//     // If an error occurred, printing the error
-//     console.error(`exec error: ${err}`);
-//     return;
-//   }
-//   // Printing the output of the command
-//   console.log(`Result: ${stdout}`);
-// });
-
 
 const storage = multer.diskStorage({
   destination: "/app/data/uploads",
@@ -55,7 +44,6 @@ const upload = multer({
   // },
 });
 
-
 let options = {};
 try {
   options = {
@@ -67,7 +55,6 @@ try {
 }
 
 // Middlewares
-
 app.use(
   cors({
     origin: CLIENT_ENDPOINT,
@@ -103,15 +90,19 @@ app.get('/config/:filename', (req, res) => {
   });
 });
 
-app.post("/uploads", upload.array("audio"), async (req, res) => {
+
+app.post("/uploads", upload.single("audio"), async (req, res) => {
+  console.log("Checking req: ", req)
+  console.log("Checking req.file: ", req.file)
   const audioFile = req.file;
-  const filename = req.body.filename;
-  console.log("using file: ", audioFile);
-  console.log(audioFile.path);
+
+  // Get the original file name, remove the extension, and add .mp3
+  const filename = path.parse(audioFile.originalname).name + '.mp3';
+  console.log("Filename: ", filename)
 
   const tempFilePath = audioFile.path;
-  const mp3OutputPath = `/app/data/uploads/${filename}.mp3`;
-  console.log('mp3 out path: ', mp3OutputPath);
+  const mp3OutputPath = `/app/data/uploads/${filename}`;
+
   // Convert the WebM file to MP3
   ffmpeg(tempFilePath)
     .outputOptions("-c:a libmp3lame")
@@ -119,23 +110,26 @@ app.post("/uploads", upload.array("audio"), async (req, res) => {
     .save(mp3OutputPath)
     .on("end", () => {
       // Send the MP3 file to the client
-      res.sendFile(path.resolve(mp3OutputPath), {}, (err) => {
-        if (err) {
-          console.error("Error sending the MP3 file:", err);
-          res.status(500).send({ error: "Error sending the MP3 file" });
-        } else {
-          // Delete the temporary WebM file and the MP3 file
-          fs.unlink(tempFilePath, (err) => {
-            if (err)
-              console.error("Error deleting the temporary WebM file:", err);
-          });
-
-          // fs.unlink(mp3OutputPath, (err) => {
-          //   if (err) 
-          //     console.error("Error deleting the MP3 file:", err);
-          // });
-        }
-      });
+      res.json({
+        filename: mp3OutputPath,
+        url: `/uploads/${filename}`
+      })
+      // fs.unlink(tempFilePath, (err) => {
+      //   if (err)
+      //     console.error("Error deleting the temp file:", err)
+      // });
+      // res.sendFile(path.resolve(mp3OutputPath), {}, (err) => {
+      //   if (err) {
+      //     console.error("Error sending the MP3 file:", err);
+      //     res.status(500).send({ error: "Error sending the MP3 file" });
+      //   } else {
+      //     // Delete the temporary WebM file and the MP3 file
+      //     fs.unlink(tempFilePath, (err) => {
+      //       if (err)
+      //         console.error("Error deleting the temporary WebM file:", err);
+      //     });
+      //   }
+      // });
     })
     .on("error", (err) => {
       console.error("Error converting the audio file:", err);
@@ -145,7 +139,6 @@ app.post("/uploads", upload.array("audio"), async (req, res) => {
 
 
 let server;
-
 try {
   server = https.createServer(options, app);
 } catch (e) {
