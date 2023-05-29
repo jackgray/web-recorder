@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import RecordRTC from "recordrtc";
+import NavBar from "./NavBar";
+import { lightTheme, darkTheme } from "./themes";
 import "bootstrap/dist/css/bootstrap.min.css";
 // import "./custom.css";
 
@@ -21,53 +23,8 @@ import {
   Paragraph,
   RangeInput,
 } from "grommet";
-import { deepMerge } from "grommet/utils";
-import { Moon, Sun, Playfill, Stopfill } from "grommet-icons";
 
-const theme = deepMerge(grommet, {
-  global: {
-    colors: {
-      brand: "#228BE6",
-    },
-    font: {
-      family: "Rajdhani",
-      size: "18px", // Adjust the base font size
-      height: "2px",
-    },
-  },
-  heading: {
-    font: {
-      family: "Rajdhani",
-      size: "28px",
-      height: "30px",
-      pad: "20px",
-    },
-  },
-  text: {
-    font: {
-      family: "Rajdhani",
-      size: "16px",
-      height: "20px",
-    },
-  },
-  select: {
-    control: {
-      extend: {
-        fontSize: "14px", // Adjust the font size for the Select component
-      },
-    },
-  },
-});
-
-const AppBar = (props) => (
-  <Header
-    background="brand"
-    pad={{ left: "medium", right: "small", vertical: "small" }}
-    elevation="medium"
-    {...props}
-  />
-);
-
+// GENERATE A NAME FOR THE AUDIO FILES
 function generateFilename(study, subj, sesType, sesNum, task, ver, acq) {
   sesNum = String(sesNum).padStart(2, "0");
   let acqPart = "";
@@ -105,6 +62,7 @@ function App() {
   const [subj, setSubj] = useState("S");
   const [sesType, setSesType] = useState("");
   const [sesNum, setSesNum] = useState("");
+  const [pageOptions, setPageOptions] = useState([]);
   const [studyOptions, setStudyOptions] = useState([]);
   const [selectedStudy, setSelectedStudy] = useState(false);
   const [taskOptions, setTaskOptions] = useState([]);
@@ -122,10 +80,10 @@ function App() {
   const [timerValue, setTimerValue] = useState(timerDuration);
   const [sliderValue, setSliderValue] = useState(5);
   const [sessionSliderValue, setSessionSliderValue] = useState(1);
-  const [dark, setDark] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const [serverLoading, setServerLoading] = useState(true);
-  const [configLoading, setConfigLoading] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [configLoading, setConfigLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/config/serverOptions.json")
@@ -150,8 +108,24 @@ function App() {
 
     if (serverEndpoint) {
       console.log("serverEndpoint var detected");
-
+      console.log("Executing config promise");
       Promise.all([
+        fetch(`${serverEndpoint}/config/pageOptions.json`)
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Failed to fetch page options");
+            }
+            console.log(response);
+            return response.json();
+          })
+          .then((data) => {
+            setPageOptions(data);
+            // setSelectedStudy(data[0]?.value);
+          })
+          .catch((error) => {
+            console.error("Error loading page options:", error);
+          }),
+
         fetch(`${serverEndpoint}/config/studyOptions.json`)
           .then((response) => {
             if (!response.ok) {
@@ -201,8 +175,13 @@ function App() {
           }),
       ])
         .then(() => {
+          console.log(
+            "Finished loading config. Switching loading state to false."
+          );
           setConfigLoading(false);
-          setLoading(false);
+          console.log(
+            `Testing loading state (should be false): ${serverLoading}`
+          );
         })
         .catch((error) => {
           console.error("Error loading options:", error);
@@ -211,6 +190,8 @@ function App() {
   }, [serverEndpoint]);
 
   useEffect(() => {
+    if (configLoading) return;
+
     const selectedTaskObj = taskOptions.find(
       (task) => task.value === selectedTask
     );
@@ -221,9 +202,12 @@ function App() {
       setVerOptions([]);
       setSelectedVer(null);
     }
-  }, [selectedTask, taskOptions]);
+    setLoading(false);
+  }, [selectedTask, taskOptions, configLoading]);
 
   useEffect(() => {
+    if (configLoading) return;
+
     const selectedVerObj = verOptions.find((ver) => ver.value === selectedVer);
     if (selectedVerObj && selectedVerObj.acq) {
       setAcqOptions(selectedVerObj.acq);
@@ -240,9 +224,19 @@ function App() {
         setSelectedAcq(null);
       }
     }
-  }, [selectedTask, selectedVer, taskOptions, verOptions, acqOptions]);
+    setLoading(false);
+  }, [
+    selectedTask,
+    selectedVer,
+    taskOptions,
+    verOptions,
+    acqOptions,
+    configLoading,
+  ]);
 
   useEffect(() => {
+    if (configLoading) return;
+
     if (selectedVer) {
       const ver = verOptions.find(
         (verOption) => verOption.value === selectedVer
@@ -254,9 +248,11 @@ function App() {
         setSelectedAcq(null);
       }
     }
-  }, [selectedVer, verOptions]);
+  }, [selectedVer, verOptions, configLoading]);
 
   useEffect(() => {
+    if (configLoading) return;
+
     const selectedTaskObj = taskOptions.find(
       (task) => task.value === selectedTask
     );
@@ -272,6 +268,7 @@ function App() {
     } else {
       setTaskPrompt("");
     }
+    setLoading(false);
   }, [
     selectedTask,
     selectedAcq,
@@ -279,9 +276,12 @@ function App() {
     taskOptions,
     acqOptions,
     verOptions,
+    configLoading,
   ]);
 
   useEffect(() => {
+    if (configLoading) return;
+
     let intervalId;
     if (timerRunning) {
       intervalId = setInterval(() => {
@@ -291,7 +291,7 @@ function App() {
     return () => {
       clearInterval(intervalId);
     };
-  }, [timerRunning]);
+  }, [timerRunning, configLoading]);
 
   const startRecording = async () => {
     setIsRecording(true);
@@ -405,198 +405,192 @@ function App() {
     const scale_val = 0.8;
   };
 
-  if (loading) {
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+  };
+
+  if (configLoading || loading) {
     return <div>Loading...</div>;
   } else {
+    console.log("Checking pageOptions... : ", pageOptions);
+    console.log("Checking closer.. : ", pageOptions[0])
     return (
-      <Grommet theme={theme} full>
-        <Box
-          pad="medium"
-          background="light-2"
-          overflow="scroll"
-          style={{ height: "100vh" }}
-        >
-          <AppBar>
-            <Text size="large">NARC Apps</Text>
-            <Button
-              icon={dark ? <Moon /> : <Sun />}
-              onClick={() => setDark(!dark)}
-            />
-          </AppBar>
-          <Box direction="row" justify="center" pad="medium">
-            <Card width="large" height="100vh">
-              <CardBody>
-                <Box>
-                  <Box pad="medium">
-                    <Header level={2}>NARC Audio Recorder</Header>
-                  </Box>
-                  <Card pad="15px">
-                    <Text pad="medium">
-                      Please fill out every single field, even if it is
-                      pre-selected.
-                    </Text>
-                  </Card>
-                  <Grid
-                    margin={{ top: "medium" }}
-                    columns={{ count: 2, size: "auto" }}
-                    gap="large"
-                  >
-                    <Card>
-                      <Text>Study</Text>
-                      <Select
-                        options={studyOptions.map((option) => option.label)}
-                        value={
-                          studyOptions.find(
-                            (option) => option.value === selectedStudy
-                          )?.label
-                        }
-                        onChange={({ option }) =>
-                          setSelectedStudy(
-                            studyOptions.find(
-                              (studyOption) => studyOption.label === option
-                            )?.value
-                          )
-                        }
-                      />
-                    </Card>
-                    <Card>
-                      <Text>Subject ID</Text>
-                      <TextInput
-                        placeholder="Subject ID"
-                        value={subj}
-                        onChange={(event) => setSubj(event.target.value)}
-                      />
-                    </Card>
-                    <Card>
-                      <Text>Session Type</Text>
-                      <Select
-                        options={sessionOptions.map((option) => option.label)}
-                        value={
-                          sessionOptions.find(
-                            (option) => option.value === sesType
-                          )?.label
-                        }
-                        onChange={({ option }) =>
-                          setSesType(
-                            sessionOptions.find(
-                              (sessionOption) => sessionOption.label === option
-                            )?.value
-                          )
-                        }
-                      />
-                    </Card>
-                    <Card align="left">
-                      <Text>
-                        Session Number: {sessionSliderValue}{" "}
-                        {sessionSliderValue !== 1 ? "" : ""}
-                      </Text>
-                      <RangeInput
-                        min={1}
-                        max={10}
-                        value={sessionSliderValue}
-                        onChange={(event) => {
-                          setSessionSliderValue(parseInt(event.target.value));
-                          setSesNum(parseInt(event.target.value));
-                        }}
-                      />
-                      <Text></Text>
-                    </Card>
-                    <Card>
-                      <Text>Task Name</Text>
-                      <Select
-                        options={taskOptions.map((option) => option.label)}
-                        value={taskName}
-                        onChange={({ option }) => {
-                          const selectedOption = taskOptions.find(
-                            (taskOption) => taskOption.label === option
-                          );
-                          setTaskName(option);
-                          setSelectedTask(selectedOption.value);
-                        }}
-                      />
-                    </Card>
-                    <Card>
-                      <Text>Version</Text>
-                      <Select
-                        options={verOptions.map((option) => option.label)}
-                        value={
-                          verOptions.find(
-                            (option) => option.value === selectedVer
-                          )?.label
-                        }
-                        onChange={({ option }) =>
-                          setSelectedVer(
-                            verOptions.find(
-                              (verOption) => verOption.label === option
-                            )?.value
-                          )
-                        }
-                      />
-                    </Card>
-                    {acqOptions.length > 0 && (
-                      <Card>
-                        <Text>Acquisition</Text>
-                        <Select
-                          options={acqOptions.map((option) => option.label)}
-                          value={
-                            acqOptions.find(
-                              (option) => option.value === selectedAcq
-                            )?.label
-                          }
-                          onChange={({ option }) =>
-                            setSelectedAcq(
-                              acqOptions.find(
-                                (acqOption) => acqOption.label === option
-                              )?.value
-                            )
-                          }
-                        />
-                      </Card>
-                    )}
-                    <Box>
-                      <Paragraph size="small" pad="medium">
-                        Please read the following prompt out loud to the
-                        participant
-                      </Paragraph>
-
-                      <Paragraph size="xlarge" pad="medium" wrap>
-                        {taskPrompt}
-                      </Paragraph>
-                    </Box>
-
-                    <Card align="center">
-                      <Text>Timer Duration</Text>
-                      <RangeInput
-                        min={1}
-                        max={10}
-                        value={sliderValue}
-                        onChange={(event) =>
-                          setSliderValue(parseInt(event.target.value))
-                        }
-                      />
-                      <Text>
-                        {sliderValue} minute{sliderValue !== 1 ? "s" : ""}
-                      </Text>
-                    </Card>
-                    {timerRunning && (
-                      <Text textAlign="center" size="xlarge" weight="bold">
-                        {formatTime(timerValue, timerRunning)}
-                      </Text>
-                    )}
-                    <Card align="center">
-                      <Button
-                        primary
-                        label={
-                          isRecording ? "Stop Recording" : "Start Recording"
-                        }
-                        color={isRecording ? "status-critical" : "status-ok"}
-                        onClick={isRecording ? stopRecording : startRecording}
-                      />
-                    </Card>
-                  </Grid>
-                </Box>
-              </CardBody>
+      // <Grommet theme={commonTheme} themeMode={darkMode ? "dark" : "light"} full>
+      <Grommet theme={darkMode ? darkTheme : lightTheme} full>
+        <Box pad="medium" overflow="scroll" style={{ height: "100vh" }} fill>
+          <NavBar
+            darkMode={darkMode}
+            toggleDarkMode={toggleDarkMode}
+            header={pageOptions[0]?.header}
+          />
+          <Box
+            pad="medium"
+            overflow="scroll"
+            style={{ height: "100vh" }}
+            responsive
+          >
+            <Box pad="medium">
+              <Header level={2}>{pageOptions[1]?.subheader}</Header>
+            </Box>
+            <Card pad="15px">
+              <Text pad="medium">{pageOptions[2]?.description}</Text>
             </Card>
+            <Grid
+              columns={{
+                count: 2,
+                size: ["auto", "auto", "auto"],
+                responsive: true,
+              }}
+              gap="medium"
+              margin="medium"
+            >
+              <Box>
+                <Text>Study</Text>
+                <Select
+                  options={studyOptions.map((option) => option.label)}
+                  value={
+                    studyOptions.find(
+                      (option) => option.value === selectedStudy
+                    )?.label
+                  }
+                  onChange={({ option }) =>
+                    setSelectedStudy(
+                      studyOptions.find(
+                        (studyOption) => studyOption.label === option
+                      )?.value
+                    )
+                  }
+                />
+              </Box>
+              <Box>
+                <Text>Subject ID</Text>
+                <TextInput
+                  placeholder="Subject ID"
+                  value={subj}
+                  onChange={(event) => setSubj(event.target.value)}
+                />
+              </Box>
+              <Box>
+                <Text>Session Type</Text>
+                <Select
+                  options={sessionOptions.map((option) => option.label)}
+                  value={
+                    sessionOptions.find((option) => option.value === sesType)
+                      ?.label
+                  }
+                  onChange={({ option }) =>
+                    setSesType(
+                      sessionOptions.find(
+                        (sessionOption) => sessionOption.label === option
+                      )?.value
+                    )
+                  }
+                />
+              </Box>
+              <Box>
+                <Text>Task Name</Text>
+                <Select
+                  options={taskOptions.map((option) => option.label)}
+                  value={taskName}
+                  onChange={({ option }) => {
+                    const selectedOption = taskOptions.find(
+                      (taskOption) => taskOption.label === option
+                    );
+                    setTaskName(option);
+                    setSelectedTask(selectedOption.value);
+                  }}
+                />
+              </Box>
+              {acqOptions.length > 0 && (
+                <Box>
+                  <Text>Acquisition</Text>
+                  <Select
+                    options={acqOptions.map((option) => option.label)}
+                    value={
+                      acqOptions.find((option) => option.value === selectedAcq)
+                        ?.label
+                    }
+                    onChange={({ option }) =>
+                      setSelectedAcq(
+                        acqOptions.find(
+                          (acqOption) => acqOption.label === option
+                        )?.value
+                      )
+                    }
+                  />
+                </Box>
+              )}
+              <Box>
+                <Text>Version</Text>
+                <Select
+                  options={verOptions.map((option) => option.label)}
+                  value={
+                    verOptions.find((option) => option.value === selectedVer)
+                      ?.label
+                  }
+                  onChange={({ option }) =>
+                    setSelectedVer(
+                      verOptions.find((verOption) => verOption.label === option)
+                        ?.value
+                    )
+                  }
+                />
+              </Box>
+              <Box align="left">
+                <Text>
+                  Session Number: {sessionSliderValue}{" "}
+                  {sessionSliderValue !== 1 ? "" : ""}
+                </Text>
+                <RangeInput
+                  min={1}
+                  max={60}
+                  value={sessionSliderValue}
+                  onChange={(event) => {
+                    setSessionSliderValue(parseInt(event.target.value));
+                    setSesNum(parseInt(event.target.value));
+                  }}
+                />
+              </Box>
+
+              <Box align="center">
+                <Text>Timer Duration</Text>
+                <RangeInput
+                  min={1}
+                  max={10}
+                  value={sliderValue}
+                  onChange={(event) =>
+                    setSliderValue(parseInt(event.target.value))
+                  }
+                />
+                <Text>
+                  {sliderValue} minute{sliderValue !== 1 ? "s" : ""}
+                </Text>
+              </Box>
+              <Box align="center">
+                <Box>
+                  {timerRunning && (
+                    <Text textAlign="center" size="xlarge" weight="bold">
+                      {formatTime(timerValue, timerRunning)}
+                    </Text>
+                  )}
+                </Box>
+                <Button
+                  primary
+                  label={isRecording ? "Stop Recording" : "Start Recording"}
+                  color={isRecording ? "status-critical" : "status-ok"}
+                  onClick={isRecording ? stopRecording : startRecording}
+                />
+              </Box>
+            </Grid>
+            <Box>
+              <Paragraph size="small" pad="medium">
+                Please read the following prompt out loud to the participant
+              </Paragraph>
+
+              <Paragraph size="large" pad="medium" wrap>
+                {taskPrompt}
+              </Paragraph>
+            </Box>
           </Box>
         </Box>
       </Grommet>

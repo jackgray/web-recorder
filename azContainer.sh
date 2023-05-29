@@ -12,6 +12,7 @@ az container create \
 --environment-variables \
 CLIENT_ENDPOINT="$CLIENT_ENDPOINT" \
 SERVER_ENDPOINT="$SERVER_ENDPOINT" \
+NGINX_SERVER_NAME="$NGINX_SERVER_NAME" \
 SERVER_PORT="$SERVER_PORT" \
 --azure-file-volume-account-name "${FILE_VOLUME_ACCOUNT_NAME}" \
 --azure-file-volume-account-key "${FILE_VOLUME_ACCOUNT_KEY}" \

@@ -17,10 +17,14 @@ FROM nginx:stable-alpine as serve
 
 RUN rm /etc/nginx/conf.d/default.conf
 
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf /etc/nginx/nginx.template
 
 COPY --from=build /app/build /usr/share/nginx/html
 
 EXPOSE 443
 
-CMD ["nginx", "-g", "daemon off;"]
+# Add bash
+RUN apk add --no-cache bash
+
+CMD /bin/bash -c "envsubst '$NGINX_SERVER_NAME' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
+# CMD ["nginx", "-g", "daemon off;"]

@@ -13,42 +13,26 @@ const fs = require("fs");
 const path = require("path");
 ffmpeg.setFfmpegPath(ffmpegPath);
 
-
-const storage = multer.diskStorage({
-  destination: "/app/data/uploads",
-  filename: (req, file, cb) => {
-    cb(null, file.filename);
-  },
-});
-
-// const upload = multer({
-//   storage,
-//   limits: {
-//     fileSize: 10 * 1024 * 1024, // 10 MB
-//   },
-//   fileFilter: (req, file, cb) => {
-//     if (file.mimetype.startsWith("audio/")) {
-//       cb(null, true);
-//     } else {
-//       cb(new Error("Invalid file type"), false);
-//     }
-//   },
-// });
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10 MB
-  },
-  // fileFilter: (req, file, cb) => {
-  //   cb(null, true); // Accept all file types
-  // },
-});
-
 let options = {};
 try {
   options = {
-    key: fs.readFileSync('/app/data/ssl/audio_narclab_com.key'),
-    cert: fs.readFileSync('/app/data/ssl/audio_narclab_com.crt')
+    key: fs.readFileSync('/app/data/ssl/server_ssl.key'),
+    cert: fs.readFileSync('/app/data/ssl/server_ssl.crt'),
+    ca: fs.readFileSync('/app/data/ssl/server_ssl.ca-bundle'),
+    dhparam: fs.readFileSync('/app/data/ssl/dhparam.pem'),
+    secureProtocol: 'TLSv1_2_method',
+    ciphers: [
+      "ECDHE-RSA-AES128-GCM-SHA256",
+      "ECDHE-ECDSA-AES128-GCM-SHA256",
+      "ECDHE-RSA-AES256-GCM-SHA384",
+      "ECDHE-ECDSA-AES256-GCM-SHA384",
+      "DHE-RSA-AES128-GCM-SHA256",
+      "ECDHE-RSA-AES128-SHA256",
+      "DHE-RSA-AES128-SHA256",
+      "ECDHE-RSA-AES256-SHA384",
+      "DHE-RSA-AES256-SHA384"
+    ].join(':'),
+    honorCipherOrder: true
   };
 } catch (e) {
   console.error("Error reading SSL certificate:", e);
@@ -91,93 +75,45 @@ app.get('/config/:filename', (req, res) => {
 });
 
 
-// app.post("/uploads", async (req, res) => {
-//   console.log("Checking req: ", req)
-//   console.log("Checking req.file: ", req.file)
-//   const audioFile = req.file;
+const storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, '/app/data/audio');
+  },
+  filename: function(req, file, cb) {
+    cb(null, file.originalname);
+  }
+});
 
-//   const storage = multer.diskStorage({
-//     destination: function(req, file, cb) {
-//       destination: function(req, file, cb) {
-//         cb(null, '/app/data/audio');
-//       },
-//       filename: function(req, file, cb) {
-//         cb(null, file.originalname);
-//       }
-//     }
-//   });
+const upload = multer({ storage: storage }).single('audio');
 
-//   const upload = multer({ storage: storage }).single('audio');
+app.post("/uploads", upload, async (req, res) => {
+  console.log("Checking req: ", req)
+  console.log("Checking req.file: ", req.file)
+  const audioFile = req.file;
 
-//   upload(req, res, function(err) {
-//     if (err) {
-//       return res.status(500).json({ error: err.message });
-//     }
+  // Get the original file name, remove the extension, and add .mp3
+  const filename = path.parse(audioFile.originalname).name + '.mp3';
+  console.log("Filename: ", filename)
 
-//     res.status(200).json({ url: '/data/audio/' + req.file.originalname })
-//   })
+  const tempFilePath = audioFile.path;
+  const mp3OutputPath = `/app/data/audio/${filename}`;
 
-//   // Get the original file name, remove the extension, and add .mp3
-//   const filename = path.parse(audioFile.originalname).name + '.mp3';
-//   console.log("Filename: ", filename)
-
-//   const tempFilePath = audioFile.path;
-//   const mp3OutputPath = `/app/data/uploads/${filename}`;
-
-//   // Convert the WebM file to MP3
-//   ffmpeg(tempFilePath)
-//     .outputOptions("-c:a libmp3lame")
-//     .toFormat("mp3")
-//     .save(mp3OutputPath)
-//     .on("end", () => {
-//       // Send the MP3 file to the client
-//       res.json({
-//         filename: mp3OutputPath,
-//         url: `/uploads/${filename}`
-//       })
-//       // fs.unlink(tempFilePath, (err) => {
-//       //   if (err)
-//       //     console.error("Error deleting the temp file:", err)
-//       // });
-//       // res.sendFile(path.resolve(mp3OutputPath), {}, (err) => {
-//       //   if (err) {
-//       //     console.error("Error sending the MP3 file:", err);
-//       //     res.status(500).send({ error: "Error sending the MP3 file" });
-//       //   } else {
-//       //     // Delete the temporary WebM file and the MP3 file
-//       //     fs.unlink(tempFilePath, (err) => {
-//       //       if (err)
-//       //         console.error("Error deleting the temporary WebM file:", err);
-//       //     });
-//       //   }
-//       // });
-//     })
-//     .on("error", (err) => {
-//       console.error("Error converting the audio file:", err);
-//       res.status(500).send({ error: "Error converting the audio file" });
-//     });
-// });
-
-app.post('/uploads', async (req, res) => {
-  const storage = multer.diskStorage({
-    destination: function(req, file, cb) {
-      cb(null, '/app/data/audio');
-    },
-    filename: function(req, file, cb) {
-      cb(null, file.originalname);
-    },
-  });
-
-  const upload = multer({ storage: storage }).single('audio');
-
-  upload(req, res, function(err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-
-    // Assuming your file is stored at /app/data/audio/filename.mp3
-    res.status(200).json({ url: '/data/audio/' + req.file.originalname });
-  });
+  // Convert the WebM file to MP3
+  ffmpeg(tempFilePath)
+    .outputOptions("-c:a libmp3lame")
+    .toFormat("mp3")
+    .save(mp3OutputPath)
+    .on("end", () => {
+      // Send the MP3 file to the client
+      res.json({
+        filename: filename,
+        url: `/data/audio/${filename}`
+      })
+    })
+    .on("error", (err) => {
+      console.error("Error converting the audio file:", err);
+      res.status(500).send({ error: "Error converting the audio file" });
+    });
 });
 
 
