@@ -2,3 +2,6 @@
 /fileshare
 client/node_modules
 server/node_modules
+app.yaml
+client.yaml
+server.yaml

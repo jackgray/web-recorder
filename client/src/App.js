@@ -3,6 +3,7 @@ import RecordRTC from "recordrtc";
 import NavBar from "./NavBar";
 import { lightTheme, darkTheme } from "./themes";
 import "bootstrap/dist/css/bootstrap.min.css";
+import DateInput from "./DateInput";
 // import "./custom.css";
 
 import {
@@ -10,6 +11,8 @@ import {
   Button,
   Card,
   CardBody,
+  CardHeader,
+  FileInput,
   Grid,
   Grommet,
   grommet,
@@ -23,25 +26,6 @@ import {
   Paragraph,
   RangeInput,
 } from "grommet";
-
-// GENERATE A NAME FOR THE AUDIO FILES
-function generateFilename(study, subj, sesType, sesNum, task, ver, acq) {
-  sesNum = String(sesNum).padStart(2, "0");
-  let acqPart = "";
-  if (acq) {
-    acqPart = `_acq-${acq}`;
-  }
-  let verPart = "";
-  if (ver) {
-    verPart = `_v-${ver}`;
-  }
-  let filename = `sub-${study}${subj.replace(
-    "S",
-    ""
-  )}_ses-${sesType}${sesNum}_task-${task}${verPart}${acqPart}_audio`;
-
-  return filename;
-}
 
 // import formatTime from './formatTime'
 
@@ -84,6 +68,9 @@ function App() {
   const [serverLoading, setServerLoading] = useState(true);
   const [configLoading, setConfigLoading] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [filename, setFilename] = useState("");
+  const [selectedDateTime, setDateTime] = useState(null);
 
   useEffect(() => {
     fetch("/config/serverOptions.json")
@@ -98,6 +85,7 @@ function App() {
       });
   }, []);
 
+  // Detect when config resources are available.
   useEffect(() => {
     console.log(
       `Checking serverEndpoint state inside config retreival: ${serverEndpoint}`
@@ -180,7 +168,7 @@ function App() {
           );
           setConfigLoading(false);
           console.log(
-            `Testing loading state (should be false): ${serverLoading}`
+            `Testing loading state (should be false): ${configLoading}`
           );
         })
         .catch((error) => {
@@ -189,6 +177,7 @@ function App() {
     }
   }, [serverEndpoint]);
 
+  // Update changes in form values
   useEffect(() => {
     if (configLoading) return;
 
@@ -204,7 +193,6 @@ function App() {
     }
     setLoading(false);
   }, [selectedTask, taskOptions, configLoading]);
-
   useEffect(() => {
     if (configLoading) return;
 
@@ -233,7 +221,6 @@ function App() {
     acqOptions,
     configLoading,
   ]);
-
   useEffect(() => {
     if (configLoading) return;
 
@@ -249,7 +236,6 @@ function App() {
       }
     }
   }, [selectedVer, verOptions, configLoading]);
-
   useEffect(() => {
     if (configLoading) return;
 
@@ -279,6 +265,7 @@ function App() {
     configLoading,
   ]);
 
+  // Update countdown
   useEffect(() => {
     if (configLoading) return;
 
@@ -292,6 +279,126 @@ function App() {
       clearInterval(intervalId);
     };
   }, [timerRunning, configLoading]);
+
+  const formatDateTime = (dateTimeString) => {
+    const dateTime = new Date(dateTimeString);
+    const year = dateTime.getFullYear();
+    const month = String(dateTime.getMonth() + 1).padStart(2, "0");
+    const day = String(dateTime.getDate()).padStart(2, "0");
+    // const hours = String(dateTime.getHours()).padStart(2, "0");
+    // const minutes = String(dateTime.getMinutes()).padStart(2, "0");
+    return `${year}${month}${day}`;
+  };
+
+  // Generate BIDS file name
+  const generateFilename = (study, subj, sesType, sesNum, task, ver, acq, selectedDateTime) => {
+    // Leave date blank if no date is provided and a file is selected for upload
+    if (selectedFile !== null && selectedDateTime === null) {
+      var datetime = "";
+      // Get current date and time if no file is selected for upload
+    } else if (selectedFile === null) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      const seconds = String(now.getSeconds()).padStart(2, "0");
+      var datetime = `_date-${year}${month}${day}${hours}${minutes}`;
+      // Use and format date from date picker component if date is selected
+    } else if (selectedDateTime !== null) {
+      console.log(`Updating date: ${selectedDateTime}`)
+      var datetime = `_date-${formatDateTime(selectedDateTime)}`;
+      console.log(`Formatted date: ${datetime}`)
+    }
+
+    sesNum = String(sesNum).padStart(2, "0");
+    let acqPart = "";
+    if (acq) {
+      acqPart = `_acq-${acq}`;
+    }
+    let verPart = "";
+    if (ver) {
+      verPart = `_v-${ver}`;
+    }
+    let filename = `sub-${study}${subj.replace(
+      "S",
+      ""
+    )}_ses-${sesType}${sesNum}_task-${task}${verPart}${acqPart}${datetime}_audio`;
+
+    return filename;
+  };
+
+  // Update filename on form changes
+  useEffect(() => {
+    const updatedFilename = generateFilename(
+      selectedStudy,
+      subj,
+      sesType,
+      sessionSliderValue,
+      selectedTask,
+      selectedVer,
+      selectedAcq,
+      selectedDateTime
+    );
+    setFilename(updatedFilename);
+  }, [
+    selectedStudy,
+    subj,
+    sesType,
+    sessionSliderValue,
+    selectedTask,
+    selectedVer,
+    selectedAcq,
+    selectedDateTime,
+    selectedFile,
+  ]);
+
+  // Package the form data with audio object and filename
+  const createFormData = (file) => {
+    const formData = new FormData();
+    formData.append("audio", file, filename);
+    // Additional form data if needed
+    formData.append("subj", subj);
+    formData.append("ses_type", sesType);
+    formData.append("ses_num", String(sessionSliderValue).padStart(2, "0"));
+    formData.append("study", selectedStudy);
+    formData.append("task", selectedTask);
+    formData.append("acq", selectedAcq);
+    formData.append("ver", selectedVer);
+
+    return formData;
+  };
+
+  // Send file to server
+  const uploadFile = async (formData) => {
+    try {
+      console.log("Uploading audio file to server (/uploads)");
+
+      const response = await fetch(`${serverEndpoint}/uploads`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("fetched json data: ", data);
+        const mp3Download = serverEndpoint + data.url;
+        console.log("Path to mp3 file: ", mp3Download);
+        const mp3Blob = await fetch(mp3Download).then((res) => res.blob());
+
+        // Create a link to download the MP3 file, then click it
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(mp3Blob);
+        link.download = data.filename;
+        link.click();
+      } else {
+        console.error("Error uploading the audio file.");
+      }
+    } catch (err) {
+      console.error("Error uploading audio:", err.stack);
+    }
+  };
 
   const startRecording = async () => {
     setIsRecording(true);
@@ -343,41 +450,19 @@ function App() {
     }, 1000);
   };
 
+  // End recording, stop timer and send blob to server
   const stopRecording = async () => {
     setIsRecording(false);
     setTimerRunning(false);
     setTimerValue(sliderValue * 60);
     recorder.stopRecording(async () => {
-      // Generate the filename
-      const filename = generateFilename(
-        selectedStudy,
-        subj,
-        sesType,
-        sessionSliderValue,
-        selectedTask,
-        selectedVer,
-        selectedAcq
-      );
-
       const blob = recorder.getBlob();
-      const blobType = blob.type;
-      const blobExtension = blobType.split("/")[1];
-      const webfilename = filename + "." + blobExtension;
-      console.log("using ", webfilename);
-      console.log(blob.type);
 
-      const formData = new FormData();
-      formData.append("audio", blob, webfilename);
-      formData.append("subj", subj);
-      formData.append("ses_type", sesType);
-      formData.append("ses_num", String(sessionSliderValue).padStart(2, "0"));
-      formData.append("study", selectedStudy);
-      formData.append("task", selectedTask);
-      formData.append("acq", selectedAcq);
-      formData.append("ver", selectedVer);
+      const formData = createFormData(blob);
+      uploadFile(formData);
 
       try {
-        console.log("Fetching audio file from server (/uploads)");
+        console.log("Sending audio file to server (/uploads)");
         const response = await fetch(`${serverEndpoint}/uploads`, {
           method: "POST",
           body: formData,
@@ -405,6 +490,25 @@ function App() {
     const scale_val = 0.8;
   };
 
+  const handleFileChange = (event) => {
+    const fileList = event.target.files;
+    if (fileList.length > 0) {
+      const uploadedFile = fileList[0];
+      setSelectedFile(uploadedFile);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (selectedFile) {
+      const formData = createFormData(selectedFile);
+      console.log("Uploading file:", selectedFile);
+      await uploadFile(formData);
+      setSelectedFile(null);
+    } else {
+      console.log("No file selected.");
+    }
+  };
+
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
@@ -412,10 +516,7 @@ function App() {
   if (configLoading || loading) {
     return <div>Loading...</div>;
   } else {
-    console.log("Checking pageOptions... : ", pageOptions);
-    console.log("Checking closer.. : ", pageOptions[0])
     return (
-      // <Grommet theme={commonTheme} themeMode={darkMode ? "dark" : "light"} full>
       <Grommet theme={darkMode ? darkTheme : lightTheme} full>
         <Box pad="medium" overflow="scroll" style={{ height: "100vh" }} fill>
           <NavBar
@@ -426,15 +527,14 @@ function App() {
           <Box
             pad="medium"
             overflow="scroll"
-            style={{ height: "100vh" }}
+            style={{ height: "95vh" }}
             responsive
           >
-            <Box pad="medium">
-              <Header level={2}>{pageOptions[1]?.subheader}</Header>
-            </Box>
-            <Card pad="15px">
-              <Text pad="medium">{pageOptions[2]?.description}</Text>
+            <Card pad="medium">
+              <CardHeader level={2}>{pageOptions[1].subheader}</CardHeader>
+              <CardBody pad="medium">{pageOptions[2].description}</CardBody>
             </Card>
+            {/* </Box> */}
             <Grid
               columns={{
                 count: 2,
@@ -566,6 +666,15 @@ function App() {
                   {sliderValue} minute{sliderValue !== 1 ? "s" : ""}
                 </Text>
               </Box>
+              <Box>
+                <Paragraph size="small" pad="medium">
+                  Please read the following prompt out loud to the participant
+                </Paragraph>
+
+                <Paragraph size="large" pad="medium" wrap>
+                  {taskPrompt}
+                </Paragraph>
+              </Box>
               <Box align="center">
                 <Box>
                   {timerRunning && (
@@ -582,14 +691,34 @@ function App() {
                 />
               </Box>
             </Grid>
-            <Box>
-              <Paragraph size="small" pad="medium">
-                Please read the following prompt out loud to the participant
-              </Paragraph>
+            <Box flex="true" padding="medium">
+              <Text padding="medium">Or, upload a file</Text>
 
-              <Paragraph size="large" pad="medium" wrap>
-                {taskPrompt}
-              </Paragraph>
+              <Grid columns={["flex", "flex"]} gap="small">
+                <Box>
+                  <FileInput
+                    name="file"
+                    onChange={(event) => {
+                      const fileList = event.target.files;
+                      const uploadFile = fileList[0];
+                      setSelectedFile(uploadFile);
+                    }}
+                  />
+                  <Button
+                    label={selectedFile ? "Upload" : "Select a File"}
+                    onClick={handleUpload}
+                  />
+                </Box>
+                <Box>
+                  <DateInput
+                    format="mm/dd/yyyy"
+                    value={selectedDateTime}
+                    onChange={(event) => {
+                      setDateTime(event.value);
+                    }}
+                  />
+                </Box>
+              </Grid>
             </Box>
           </Box>
         </Box>

@@ -52,7 +52,7 @@ export const commonTheme = {
     font: {
       family: "Rajdhani",
       size: {
-        xsmall: "18px",
+        xsmall: "15px",
         small: "20px",
         medium: "24px",
         large: "28px",
@@ -62,7 +62,7 @@ export const commonTheme = {
       height: "30px",
       pad: {
         xsmall: "10px",
-        small: "15px",
+        small: "12px",
         medium: "20px",
         large: "25px",
         xlarge: "30px",
@@ -74,8 +74,8 @@ export const commonTheme = {
     font: {
       family: "Rajdhani",
       size: {
-        xsmall: "12px",
-        small: "14px",
+        xsmall: "10px",
+        small: "12px",
         medium: "16px",
         large: "18px",
         xlarge: "20px",
