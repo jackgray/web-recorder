@@ -13,6 +13,7 @@ import {
   CardBody,
   CardHeader,
   FileInput,
+  Footer,
   Grid,
   Grommet,
   grommet,
@@ -21,9 +22,11 @@ import {
   PageContent,
   PageHeader,
   Text,
+  TextArea,
   TextInput,
   Select,
   Paragraph,
+  RadioButtonGroup,
   RangeInput,
 } from "grommet";
 
@@ -71,6 +74,7 @@ function App() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [filename, setFilename] = useState("");
   const [selectedDateTime, setDateTime] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetch("/config/serverOptions.json")
@@ -290,29 +294,46 @@ function App() {
     return `${year}${month}${day}`;
   };
 
+  const clearDate = () => {
+    setDateTime(null);
+  };
+
   // Generate BIDS file name
-  const generateFilename = (study, subj, sesType, sesNum, task, ver, acq, selectedDateTime) => {
+  const generateFilename = (
+    study,
+    subj,
+    sesType,
+    sesNum,
+    task,
+    ver,
+    acq,
+    selectedDateTime
+  ) => {
     // Leave date blank if no date is provided and a file is selected for upload
     if (selectedFile !== null && selectedDateTime === null) {
       var datetime = "";
       // Get current date and time if no file is selected for upload
     } else if (selectedFile === null) {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, "0");
-      const day = String(now.getDate()).padStart(2, "0");
-      const hours = String(now.getHours()).padStart(2, "0");
-      const minutes = String(now.getMinutes()).padStart(2, "0");
+      // setDateTime(null);
+      var now = new Date();
+      var year = now.getFullYear();
+      var month = String(now.getMonth() + 1).padStart(2, "0");
+      var day = String(now.getDate()).padStart(2, "0");
+      var hours = String(now.getHours()).padStart(2, "0");
+      var minutes = String(now.getMinutes()).padStart(2, "0");
       const seconds = String(now.getSeconds()).padStart(2, "0");
       var datetime = `_date-${year}${month}${day}${hours}${minutes}`;
+      console.log("Checking date state: ", selectedDateTime);
+      console.log(`Updating date: ${datetime}`);
+
       // Use and format date from date picker component if date is selected
     } else if (selectedDateTime !== null) {
-      console.log(`Updating date: ${selectedDateTime}`)
+      console.log(`Updating date: ${selectedDateTime}`);
       var datetime = `_date-${formatDateTime(selectedDateTime)}`;
-      console.log(`Formatted date: ${datetime}`)
+      console.log(`Formatted date: ${datetime}`);
     }
 
-    sesNum = String(sesNum).padStart(2, "0");
+    setSesNum(String(sesNum).padStart(2, "0"));
     let acqPart = "";
     if (acq) {
       acqPart = `_acq-${acq}`;
@@ -326,6 +347,7 @@ function App() {
       ""
     )}_ses-${sesType}${sesNum}_task-${task}${verPart}${acqPart}${datetime}_audio`;
 
+    console.log(`Generated new filename: ${filename}`);
     return filename;
   };
 
@@ -335,7 +357,7 @@ function App() {
       selectedStudy,
       subj,
       sesType,
-      sessionSliderValue,
+      sesNum,
       selectedTask,
       selectedVer,
       selectedAcq,
@@ -346,7 +368,7 @@ function App() {
     selectedStudy,
     subj,
     sesType,
-    sessionSliderValue,
+    sesNum,
     selectedTask,
     selectedVer,
     selectedAcq,
@@ -361,7 +383,7 @@ function App() {
     // Additional form data if needed
     formData.append("subj", subj);
     formData.append("ses_type", sesType);
-    formData.append("ses_num", String(sessionSliderValue).padStart(2, "0"));
+    formData.append("ses_num", String(sesNum).padStart(2, "0"));
     formData.append("study", selectedStudy);
     formData.append("task", selectedTask);
     formData.append("acq", selectedAcq);
@@ -502,7 +524,9 @@ function App() {
     if (selectedFile) {
       const formData = createFormData(selectedFile);
       console.log("Uploading file:", selectedFile);
+      setUploading(true);
       await uploadFile(formData);
+      setUploading(false);
       setSelectedFile(null);
     } else {
       console.log("No file selected.");
@@ -530,11 +554,16 @@ function App() {
             style={{ height: "95vh" }}
             responsive
           >
-            <Card pad="medium">
-              <CardHeader level={2}>{pageOptions[1].subheader}</CardHeader>
-              <CardBody pad="medium">{pageOptions[2].description}</CardBody>
-            </Card>
-            {/* </Box> */}
+            <Grid pad="medium" flex="grow" responsive>
+              <Box pad="small" responsive>
+                <Text>{pageOptions[1].subheader}</Text>
+              </Box>
+              <Box responsive>
+                <Text wordBreak="break-word" pad="small" responsive>
+                  {pageOptions[2].description}
+                </Text>
+              </Box>
+            </Grid>
             <Grid
               columns={{
                 count: 2,
@@ -636,20 +665,28 @@ function App() {
                   }
                 />
               </Box>
-              <Box align="left">
+              <Box align="left" padding="xsmall">
                 <Text>
                   Session Number: {sessionSliderValue}{" "}
                   {sessionSliderValue !== 1 ? "" : ""}
                 </Text>
                 <RangeInput
                   min={1}
-                  max={60}
+                  max={15}
                   value={sessionSliderValue}
                   onChange={(event) => {
                     setSessionSliderValue(parseInt(event.target.value));
                     setSesNum(parseInt(event.target.value));
                   }}
                 />
+                <RadioButtonGroup
+                  name="Post Treatment Follow-ups"
+                  direction="row"
+                  options={["1mo", "3mo", "6mo", "9mo", null]}
+                  value={sesNum}
+                  onChange={(event) => setSesNum(event.target.value)}
+                />
+                <Text size="xxsmall">Post-Treatment Follow-ups</Text>
               </Box>
 
               <Box align="center">
@@ -666,15 +703,35 @@ function App() {
                   {sliderValue} minute{sliderValue !== 1 ? "s" : ""}
                 </Text>
               </Box>
+            </Grid>
+            <Grid
+              columns={{
+                count: 2,
+                size: ["auto", "auto", "auto"],
+                responsive: true,
+              }}
+              gap="medium"
+              margin="medium"
+            >
               <Box>
-                <Paragraph size="small" pad="medium">
+                <Paragraph size="small" pad="small">
                   Please read the following prompt out loud to the participant
                 </Paragraph>
 
-                <Paragraph size="large" pad="medium" wrap>
+                <Paragraph size="medium" pad="small" responsive={true}>
                   {taskPrompt}
                 </Paragraph>
               </Box>
+            </Grid>
+            <Grid
+              columns={{
+                count: 2,
+                size: ["auto", "auto", "auto"],
+                responsive: true,
+              }}
+              gap="medium"
+              margin="medium"
+            >
               <Box align="center">
                 <Box>
                   {timerRunning && (
@@ -691,10 +748,28 @@ function App() {
                 />
               </Box>
             </Grid>
+            <Grid>
+              <Text>Generated filename</Text>
+              <TextArea
+                placeholder={filename}
+                value={filename}
+                onChange={(event) => setFilename(event.target.value)}
+              />
+            </Grid>
+
             <Box flex="true" padding="medium">
               <Text padding="medium">Or, upload a file</Text>
 
-              <Grid columns={["flex", "flex"]} gap="small">
+              <Grid
+                columns={{
+                  count: 2,
+                  size: ["auto", "auto", "auto"],
+                  responsive: true,
+                }}
+                gap="small"
+                margin="small"
+                pad="large"
+              >
                 <Box>
                   <FileInput
                     name="file"
@@ -705,23 +780,35 @@ function App() {
                     }}
                   />
                   <Button
-                    label={selectedFile ? "Upload" : "Select a File"}
+                    label={
+                      uploading
+                        ? "Transferring..."
+                        : selectedFile
+                        ? "Upload"
+                        : "Select a File"
+                    }
                     onClick={handleUpload}
                   />
                 </Box>
-                <Box>
+                <Box direction="row">
                   <DateInput
                     format="mm/dd/yyyy"
                     value={selectedDateTime}
-                    onChange={(event) => {
-                      setDateTime(event.value);
+                    onDateChange={(value) => {
+                      setDateTime(value);
+                      console.log(`Setting date: ${selectedDateTime}`);
+                      console.log(`Sanity check from event.value: ${value}`);
                     }}
                   />
+                  <Button label={"Clear"} onClick={clearDate} />
                 </Box>
               </Grid>
             </Box>
           </Box>
         </Box>
+        <Footer background="brand" pad="small">
+          <Text>powered by the NARC Lab at Mount Sinai</Text>
+        </Footer>
       </Grommet>
     );
   }

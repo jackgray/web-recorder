@@ -51,6 +51,7 @@ export default class DateInput extends Component {
     const text = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
     this.setState({ date, text, active: false });
     this.focusInput = true;
+    this.props.onDateChange(text);
   }
 
   render() {
