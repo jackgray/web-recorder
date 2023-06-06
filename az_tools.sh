@@ -13,18 +13,21 @@ docker service create \
   --name client \
   --replicas 1 \
   --publish published=443,target=443 \
-  --mount type=volume,source=./ssl,target=/ssl \
+  --mount type=volume,source=fileshare,target=/app/data \
+
   --env SERVER_PORT=443 \
-  jackgray/${DOCKER_IMAGE_CLIENT}
+  ${DOCKER_IMAGE_CLIENT}
 
 docker service create \
 --name server \
 --replicas 1 \
 --publish published=443,target=443 \
---mount type=bind,source=/home/jackgray/Code/audio-recording-webapp/ssl,target=/ssl \
---mount type=bind,source=/home/jackgray/Code/audio-recording-webapp/config,target=/config \
---mount type=bind,source=/home/jackgray/Code/audio-recording-webapp/uploads,target=/uploads \
---mount type=bind,source=/home/jackgray/Code/audio-recording-webapp/audio,target=/audio \
+--mount type=bind,source=/home/jackgray/Code/web-recorder/fileshare/ssl,target=/ssl \
+--mount type=bind,source=/home/jackgray/Code/web-recorder/fileshare/config,target=/config \
+--mount type=bind,source=/home/jackgray/Code/web-recorder/fileshare/uploads,target=/uploads \
+--mount type=bind,source=/home/jackgray/Code/web-recorder/fileshare/audio,target=/audio \
 --env SERVER_PORT=443 \
-${DOCKER_IMAGE_SERVER}
+--env CLIENT_ENDPOINT="${CLIENT_ENDPOINT}" \
+--env SERVER_ENDPOOINT="${SERVER_ENDPOINT}" \
+"${DOCKER_IMAGE_SERVER}"
 

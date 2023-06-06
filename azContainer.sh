@@ -28,9 +28,15 @@ az container create \
 --ports 443 \
 --environment-variables \
 CLIENT_ENDPOINT="$CLIENT_ENDPOINT" \
+CLIENT_PORT="$CLIENT_PORT" \
 SERVER_ENDPOINT="$SERVER_ENDPOINT" \
 SERVER_PORT="$SERVER_PORT" \
+WHISPER_PORT="$WHISPER_PORT" \
+WHISPER_ENDPOINT="$WHISPER_ENDPOINT" \
 --azure-file-volume-account-name "${FILE_VOLUME_ACCOUNT_NAME}" \
 --azure-file-volume-account-key "${FILE_VOLUME_ACCOUNT_KEY}" \
 --azure-file-volume-share-name "${FILE_VOLUME_SHARE_NAME}" \
 --azure-file-volume-mount-path /app/data
+
+# Adding whisper to the backend==> create deployment group
+az deployment group create --resource-group "$RESOURCE_GROUP" --template-file .

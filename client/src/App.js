@@ -75,6 +75,8 @@ function App() {
   const [filename, setFilename] = useState("");
   const [selectedDateTime, setDateTime] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [jsonLoading, setJsonLoading] = useState(false);
+  const [audioLoading, setAudioLoading] = useState(false);
 
   useEffect(() => {
     fetch("/config/serverOptions.json")
@@ -128,7 +130,7 @@ function App() {
           })
           .then((data) => {
             setStudyOptions(data);
-            setSelectedStudy(data[0]?.value);
+            // setSelectedStudy(data[0]?.value);
           })
           .catch((error) => {
             console.error("Error loading study options:", error);
@@ -144,7 +146,7 @@ function App() {
           })
           .then((data) => {
             setSessionOptions(data);
-            setSelectedSession(data[0]?.value);
+            // setSelectedSession(data[0]?.value);
           })
           .catch((error) => {
             console.error("Error loading session options:", error);
@@ -159,8 +161,8 @@ function App() {
           })
           .then((data) => {
             setTaskOptions(data);
-            setSelectedTask(data[0]?.value);
-            setTaskPrompt(data[0]?.prompt);
+            // setSelectedTask(data[0]?.value);
+            // setTaskPrompt(data[0]?.prompt);
           })
           .catch((error) => {
             console.error("Error loading task options:", error);
@@ -240,6 +242,7 @@ function App() {
       }
     }
   }, [selectedVer, verOptions, configLoading]);
+
   useEffect(() => {
     if (configLoading) return;
 
@@ -393,32 +396,71 @@ function App() {
   };
 
   // Send file to server
-  const uploadFile = async (formData) => {
+  const uploadAudio = async (formData) => {
     try {
       console.log("Uploading audio file to server (/uploads)");
 
-      const response = await fetch(`${serverEndpoint}/uploads`, {
+      fetch(`${serverEndpoint}/uploads`, {
         method: "POST",
         body: formData,
-      });
+      })
+        .then((mp3PostRes) => {
+          if (mp3PostRes.ok) {
+            mp3PostRes.json().then((mp3data) => {
+              console.log("fetched json data: ", mp3data);
+              const mp3Download = serverEndpoint + mp3data.url;
+              console.log("Path to mp3 file: ", mp3Download);
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log("fetched json data: ", data);
-        const mp3Download = serverEndpoint + data.url;
-        console.log("Path to mp3 file: ", mp3Download);
-        const mp3Blob = await fetch(mp3Download).then((res) => res.blob());
+              // Wait for a certain duration before downloading the file
+              setTimeout(() => {
+                fetch(mp3Download)
+                  .then((mp3DownloadRes) => mp3DownloadRes.blob())
+                  .then((mp3Blob) => {
+                    // Create a browser link to download the MP3 file, then click it
+                    const link = document.createElement("a");
+                    link.href = URL.createObjectURL(mp3Blob);
+                    link.download = mp3data.filename;
+                    link.click();
+                    setAudioLoading(false);
+                  })
+                  .catch((error) => {
+                    console.error("Error fetching the MP3 file:", error);
+                  });
+              }, 3000);
+            });
+          } else {
+            console.error("Error uploading the audio file.");
+          }
+        })
+        .catch((error) => {
+          console.error("Error uploading audio:", error);
+        });
+    } catch (error) {
+      console.log("Could not send audio blob to server: ", error);
+    }
+  };
 
-        // Create a link to download the MP3 file, then click it
+  const downloadJSON = async () => {
+    try {
+      const jsonDownloadRes = await fetch(
+        `${serverEndpoint}/transcripts/${filename}.json`
+      );
+      if (jsonDownloadRes.ok) {
+        const jsonBlob = await jsonDownloadRes.blob();
+        const jsonUrl = URL.createObjectURL(jsonBlob);
+
+        // Create a link to download the JSON file
         const link = document.createElement("a");
-        link.href = URL.createObjectURL(mp3Blob);
-        link.download = data.filename;
+        link.href = jsonUrl;
+        link.download = `${filename}.json`;
         link.click();
+        setJsonLoading(false);
+        console.log("Finished loading transcript");
       } else {
-        console.error("Error uploading the audio file.");
+        console.error("Error downloading the JSON file. response.ok false: ", jsonDownloadRes);
       }
     } catch (err) {
-      console.error("Error uploading audio:", err.stack);
+      console.error("Error downloading JSON:", err.stack);
     }
   };
 
@@ -481,43 +523,41 @@ function App() {
       const blob = recorder.getBlob();
 
       const formData = createFormData(blob);
-      uploadFile(formData);
 
       try {
-        console.log("Sending audio file to server (/uploads)");
-        const response = await fetch(`${serverEndpoint}/uploads`, {
-          method: "POST",
-          body: formData,
+        setAudioLoading(true);
+        await uploadAudio(formData).then(() => {
+          try {
+            setJsonLoading(true);
+            // JSON DOWNLOAD
+            // Call the downloadJSON function after 10 minutes
+            const timeout = setTimeout(() => {
+              downloadJSON();
+
+              const interval = setInterval(downloadJSON, 5000);
+
+              // Call the downloadJSON function every 5 seconds for the next 10 minutes
+              const checkJsonLoading = setInterval(() => {
+                if (!jsonLoading) {
+                  clearInterval(timeout);
+                  clearInterval(interval);
+                  clearInterval(checkJsonLoading);
+                }
+              }, 100);
+
+              setTimeout(() => {
+                clearInterval(interval);
+                clearInterval(checkJsonLoading);
+              }, 600000); // Stop after 10 minutes (10 minutes = 10 * 60 * 1000 milliseconds)
+            }, 600000); // Wait 10 minutes (10 minutes = 10 * 60 * 1000 milliseconds)
+          } catch (err) {
+            console.error("Error uploading audio:", err.stack);
+          }
         });
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log("fetched json data: ", data);
-          const mp3Download = serverEndpoint + data.url;
-          console.log("Path to mp3 file: ", mp3Download);
-          const mp3Blob = await fetch(mp3Download).then((res) => res.blob());
-
-          // Create a link to download the MP3 file
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(mp3Blob);
-          link.download = data.filename;
-          link.click();
-        } else {
-          console.error("Error uploading the audio file.");
-        }
-      } catch (err) {
-        console.error("Error uploading audio:", err.stack);
+      } catch (error) {
+        console.error("Error uploading audio file: ", error);
       }
     });
-    const scale_val = 0.8;
-  };
-
-  const handleFileChange = (event) => {
-    const fileList = event.target.files;
-    if (fileList.length > 0) {
-      const uploadedFile = fileList[0];
-      setSelectedFile(uploadedFile);
-    }
   };
 
   const handleUpload = async () => {
@@ -525,7 +565,7 @@ function App() {
       const formData = createFormData(selectedFile);
       console.log("Uploading file:", selectedFile);
       setUploading(true);
-      await uploadFile(formData);
+      await uploadAudio(formData);
       setUploading(false);
       setSelectedFile(null);
     } else {
@@ -775,8 +815,8 @@ function App() {
                     name="file"
                     onChange={(event) => {
                       const fileList = event.target.files;
-                      const uploadFile = fileList[0];
-                      setSelectedFile(uploadFile);
+                      const uploadAudio = fileList[0];
+                      setSelectedFile(uploadAudio);
                     }}
                   />
                   <Button
