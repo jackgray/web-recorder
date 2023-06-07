@@ -1,18 +1,18 @@
 apiVersion: '2019-12-01'
 location: eastus
-name: "${CONTAINER_NAME_SERVER}"
+name: "narclab-audio-recording-server"
 properties:
   containers:
-    - name: "${CONTAINER_NAME_SERVER}"
+    - name: "narclab-audio-recording-server"
       properties:
         environmentVariables:
           - name: CLIENT_ENDPOINT
-            value: '${CLIENT_ENDPOINT}'
+            value: 'https://audio.narclab.com'
           - name: SERVER_ENDPOINT
-            value: "${SERVER_ENDPOINT}"
+            value: "https://audioserver.narclab.com"
           - name: SERVER_PORT
-            value: "${SERVER_PORT}"
-        image: "${DOCKER_IMAGE_SERVER}"
+            value: "443"
+        image: "jackgray/audio-recording-server:v1.24"
         ports:
           - port: 443
         resources:
@@ -21,26 +21,26 @@ properties:
             memoryInGB: 1.5
         volumeMounts:
           - mountPath: /app/data
-            name: "${FILE_VOLUME_SHARE_NAME}"
+            name: "narclabaudiofileshare"
       dependsOn:
-        - name: "${CONTAINER_NAME_WHISPER}"
-    - name: "${CONTAINER_NAME_WHISPER}"
+        - name: "whisper"
+    - name: "whisper"
       properties:
-        image: "${DOCKER_IMAGE_WHISPER}"
+        image: "ahmetoner/openai-whisper-asr-webservice:latest"
         resources:
           requests:
             cpu: 1.0
             memoryInGB: 1.5
         ports:
-          - port: ${WHISPER_PORT}
+          - port: 9000
   osType: Linux
   restartPolicy: Always
  
   volumes:
-    - name: "${FILE_VOLUME_SHARE_NAME}"
+    - name: "narclabaudiofileshare"
       azureFile:
         sharename: acishare
-        storageAccountName: "${FILE_VOLUME_ACCOUNT_NAME}"
-        storageAccountKey: "${FILE_VOLUME_ACCOUNT_KEY}"
+        storageAccountName: "narclabaudiostorage"
+        storageAccountKey: "j8R0+EEtm64hnreKaM4XSMZYIrT8Q5X2IgH/Wu6PbMsp7hFmKepyiQgB4ZNoow5cev9mUI7sZgS7+ASt7P4XIg=="
 tags: {}
 type: Microsoft.ContainerInstance/containerGroups

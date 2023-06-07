@@ -77,6 +77,10 @@ function App() {
   const [uploading, setUploading] = useState(false);
   const [jsonLoading, setJsonLoading] = useState(false);
   const [audioLoading, setAudioLoading] = useState(false);
+  const [transcriptUrl, setTranscriptUrl] = useState(null);
+  const [transcriptFilename, setTranscriptFilename] = useState(null);
+  const [mp3Url, setMp3Url] = useState(null);
+  const [mp3Filename, setMp3Filename] = useState(null);
 
   useEffect(() => {
     fetch("/config/serverOptions.json")
@@ -400,53 +404,58 @@ function App() {
     try {
       console.log("Uploading audio file to server (/uploads)");
 
-      fetch(`${serverEndpoint}/uploads`, {
+      // Send formData to the server
+      const response = await fetch(`${serverEndpoint}/uploads`, {
         method: "POST",
         body: formData,
-      })
-        .then((mp3PostRes) => {
-          if (mp3PostRes.ok) {
-            mp3PostRes.json().then((mp3data) => {
-              console.log("fetched json data: ", mp3data);
-              const mp3Download = serverEndpoint + mp3data.url;
-              console.log("Path to mp3 file: ", mp3Download);
+      });
 
-              // Wait for a certain duration before downloading the file
-              setTimeout(() => {
-                fetch(mp3Download)
-                  .then((mp3DownloadRes) => mp3DownloadRes.blob())
-                  .then((mp3Blob) => {
-                    // Create a browser link to download the MP3 file, then click it
-                    const link = document.createElement("a");
-                    link.href = URL.createObjectURL(mp3Blob);
-                    link.download = mp3data.filename;
-                    link.click();
-                    setAudioLoading(false);
-                  })
-                  .catch((error) => {
-                    console.error("Error fetching the MP3 file:", error);
-                  });
-              }, 3000);
-            });
-          } else {
-            console.error("Error uploading the audio file.");
-          }
-        })
-        .catch((error) => {
-          console.error("Error uploading audio:", error);
-        });
+      // look for response from the server with json data
+      if (response.ok) {
+        const data = await response.json();
+        console.log("fetched json data: ", data);
+        if (data.url && data.filename) {
+          const mp3Download = serverEndpoint + data.url;
+          setMp3Url(mp3Download);
+          setMp3Filename(data.filename);
+          console.log("Path to mp3 file: ", mp3Download);
+        } else {
+          throw new Error("Received data does not contain url or filename.");
+        }
+      } else {
+        throw new Error("Server response was not OK.");
+      }
     } catch (error) {
-      console.log("Could not send audio blob to server: ", error);
+      console.error("Error uploading the audio file:", error);
     }
   };
 
-  const downloadJSON = async () => {
+  const checkTranscript = async () => {
     try {
-      const jsonDownloadRes = await fetch(
-        `${serverEndpoint}/transcripts/${filename}.json`
+      const jsonFile = `${mp3Filename}`.replace(".mp3", ".json");
+      const res = await fetch(`${serverEndpoint}/transcripts/${jsonFile}`);
+
+      if (res.ok) {
+        const jsonUrl = `${serverEndpoint}/transcripts/${jsonFile}`;
+        setTranscriptUrl(jsonUrl);
+        setTranscriptFilename(jsonFile);
+        setJsonLoading(false);
+        console.log("Transcript found, url and filename set");
+      } else {
+        console.error("Transcript does not exist at ", jsonFile);
+      }
+    } catch (err) {
+      console.error("Error fetching JSON:", err.stack);
+    }
+  };
+
+  const downldTranscript = async () => {
+    try {
+      const res = await fetch(
+        `${serverEndpoint}/transcripts/${mp3Filename}.replace('.mp3', '.json')`
       );
-      if (jsonDownloadRes.ok) {
-        const jsonBlob = await jsonDownloadRes.blob();
+      if (res.ok) {
+        const jsonBlob = await res.blob();
         const jsonUrl = URL.createObjectURL(jsonBlob);
 
         // Create a link to download the JSON file
@@ -457,7 +466,10 @@ function App() {
         setJsonLoading(false);
         console.log("Finished loading transcript");
       } else {
-        console.error("Error downloading the JSON file. response.ok false: ", jsonDownloadRes);
+        console.error(
+          "Error downloading the JSON file. response.ok false: ",
+          res
+        );
       }
     } catch (err) {
       console.error("Error downloading JSON:", err.stack);
@@ -465,6 +477,7 @@ function App() {
   };
 
   const startRecording = async () => {
+    setMp3Url(null);
     setIsRecording(true);
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
@@ -515,47 +528,27 @@ function App() {
   };
 
   // End recording, stop timer and send blob to server
-  const stopRecording = async () => {
+  const stopRecording = () => {
     setIsRecording(false);
     setTimerRunning(false);
     setTimerValue(sliderValue * 60);
+
     recorder.stopRecording(async () => {
       const blob = recorder.getBlob();
-
       const formData = createFormData(blob);
 
       try {
         setAudioLoading(true);
-        await uploadAudio(formData).then(() => {
-          try {
-            setJsonLoading(true);
-            // JSON DOWNLOAD
-            // Call the downloadJSON function after 10 minutes
-            const timeout = setTimeout(() => {
-              downloadJSON();
-
-              const interval = setInterval(downloadJSON, 5000);
-
-              // Call the downloadJSON function every 5 seconds for the next 10 minutes
-              const checkJsonLoading = setInterval(() => {
-                if (!jsonLoading) {
-                  clearInterval(timeout);
-                  clearInterval(interval);
-                  clearInterval(checkJsonLoading);
-                }
-              }, 100);
-
-              setTimeout(() => {
-                clearInterval(interval);
-                clearInterval(checkJsonLoading);
-              }, 600000); // Stop after 10 minutes (10 minutes = 10 * 60 * 1000 milliseconds)
-            }, 600000); // Wait 10 minutes (10 minutes = 10 * 60 * 1000 milliseconds)
-          } catch (err) {
-            console.error("Error uploading audio:", err.stack);
-          }
-        });
+        console.log("Starting audio upload");
+        await uploadAudio(formData);
+        console.log(
+          "Finished audio upload, setting transcript loading to true"
+        );
+        setJsonLoading(true);
       } catch (error) {
         console.error("Error uploading audio file: ", error);
+      } finally {
+        setAudioLoading(false);
       }
     });
   };
@@ -570,6 +563,55 @@ function App() {
       setSelectedFile(null);
     } else {
       console.log("No file selected.");
+    }
+  };
+
+  const clickDownloadAudio = async () => {
+    try {
+      const res = await fetch(mp3Url);
+      if (!res.ok) {
+        throw new Error(`HTTP error. Status: ${res.status}`);
+      } else {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = mp3Filename;
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+    } catch (error) {
+      console.error(
+        `Failed to fetch the mp3 file from the server. Download may not be ready: ${error}`
+      );
+    }
+  };
+
+  const clickDownloadTranscript = async () => {
+    try {
+      const res = await fetch(transcriptUrl);
+      if (!res.ok) {
+        throw new Error(`HTTP error. Status: ${res.status}`);
+      } else {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = transcriptFilename;
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        setTranscriptUrl(null);
+      }
+    } catch (error) {
+      console.error(
+        `Failed to fetch the transcript file from the server. Download may not be ready: ${error}`
+      );
     }
   };
 
@@ -819,16 +861,45 @@ function App() {
                       setSelectedFile(uploadAudio);
                     }}
                   />
-                  <Button
-                    label={
-                      uploading
-                        ? "Transferring..."
-                        : selectedFile
-                        ? "Upload"
-                        : "Select a File"
-                    }
-                    onClick={handleUpload}
-                  />
+                  {selectedFile ||
+                    (uploading && (
+                      <Button
+                        label={
+                          uploading
+                            ? "Transferring..."
+                            : selectedFile
+                            ? "Upload"
+                            : "Nothing selected"
+                        }
+                        onClick={() => {
+                          handleUpload();
+                        }}
+                      />
+                    ))}
+                  {mp3Url && (
+                    <Button
+                      label={
+                        transcriptUrl
+                          ? "Download Transcript"
+                          : "Check Transcript Availability"
+                      }
+                      onClick={() => {
+                        if (transcriptUrl) {
+                          clickDownloadTranscript();
+                        } else {
+                          checkTranscript();
+                        }
+                      }}
+                    />
+                  )}
+                  {mp3Url && (
+                    <Button
+                      label={"Download Audio"}
+                      onClick={() => {
+                        clickDownloadAudio();
+                      }}
+                    />
+                  )}
                 </Box>
                 <Box direction="row">
                   <DateInput
