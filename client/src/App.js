@@ -51,7 +51,7 @@ function App() {
   const [sesNum, setSesNum] = useState("");
   const [pageOptions, setPageOptions] = useState([]);
   const [studyOptions, setStudyOptions] = useState([]);
-  const [selectedStudy, setSelectedStudy] = useState(false);
+  const [selectedStudy, setSelectedStudy] = useState(null);
   const [taskOptions, setTaskOptions] = useState([]);
   const [selectedTask, setSelectedTask] = useState("");
   const [taskName, setTaskName] = useState("");

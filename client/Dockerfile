@@ -26,5 +26,7 @@ EXPOSE 443
 # Add bash
 RUN apk add --no-cache bash
 
-CMD /bin/bash -c "envsubst '$NGINX_SERVER_NAME' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
+# Sub in the env vars used in nginx.conf on launch since it cannot read env vars at runtime
+# This makes the container configurable without rebuild
+CMD /bin/bash -c "envsubst '$NGINX_CLIENT_NAME' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
 # CMD ["nginx", "-g", "daemon off;"]

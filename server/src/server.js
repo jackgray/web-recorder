@@ -6,6 +6,7 @@ const https = require("https");
 const axios = require("axios");
 const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("ffmpeg-static");
+const FormData = require('form-data');
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
@@ -103,58 +104,62 @@ app.post("/uploads", upload, async (req, res) => {
     const transcriptPath = `/app/data/transcripts/${filename}.json`;
     const transcriptDownloadUrl = `/transcripts/${filename}.json`;
 
-    const convertToMP3 = new Promise((resolve, reject) => {
-      ffmpeg(tempFilePath)
-        .outputOptions("-c:a libmp3lame")
-        .toFormat("mp3")
-        .save(mp3OutputPath)
-        .on("error", (err) => {
-          console.error("Error converting file to MP3: ", err);
-          reject(err);
-        })
-        .on("end", () => {
-          resolve();
-        });
-    });
+    await convertToMP3(tempFilePath, mp3OutputPath);
+    const whisperRes = await callWhisperAPI(mp3OutputPath);
 
-    try {
-      await convertToMP3;
-    } catch (err) {
-      res.status(500).send({ error: "Error converting file to MP3" });
-      return;
-    }
-
-    fs.unlinkSync(tempFilePath);
-    res.json({ url: mp3DownloadUrl, filename: `${filename}.mp3` });
-
-    try {
-      const whisperRes = await axios.post(WHISPER_ENDPOINT, {
-        audio: fs.createReadStream(mp3OutputPath),
-      });
-      if (whisperRes.status === 200) {
-        fs.writeFileSync(transcriptPath, JSON.stringify(whisperRes.data));
-        res.json({ url: transcriptDownloadUrl, filename: `${filename}.json` });
-        console.log("Transcript received:", whisperRes.data);
-      } else {
-        console.error(
-          "Error calling the Whisper API:",
-          error,
-          whisperRes.status
-        );
-        res.status(500).send({ error: "Whisper integration error" });
-      }
-    } catch (error) {
-      console.error("Error while awaiting response from Whisper:", error);
-      res.status(500).send({ error: "Error awaiting response from Whisper." });
+    if (whisperRes.status === 200) {
+      fs.writeFileSync(transcriptPath, JSON.stringify(whisperRes.data));
+      res.json({ url: `/audio/${filename}.mp3`, filename: `${filename}.mp3`, transcriptUrl: `/transcripts/${filename}.json`, transcriptFilename: `${filename}.json` });  
+    } else {
+      console.error("Error calling the Whisper API: ", error, whisperRes.status);
+      return res.status(500).send({ error: "Whisper integration error" });
     }
   } catch (error) {
     console.log(
       "Error getting webm file from client or converting to MP3:",
       error
     );
-    res.status(500).send({ error: "File conversion error" });
+    return res.status(500).send({ error: "File conversion error" });
   }
 });
+
+async function convertToMP3(tempFilePath, mp3OutputPath) {
+  return new Promise((resolve, reject) => {
+  ffmpeg(tempFilePath)
+    .outputOptions("-c:a libmp3lame")
+    .toFormat("mp3")
+    .save(mp3OutputPath)
+    .on("error", (err) => {
+      console.error("Error converting file to MP3: ", err);
+      reject(err);
+    })
+    .on("end", () => {
+      fs.unlinkSync(tempFilePath);
+      resolve();
+    });
+  });
+}
+
+async function callWhisperAPI(mp3OutputPath) {
+  const audioStream = fs.createReadStream(mp3OutputPath);
+  const audioForm = new FormData();
+  audioForm.append('audio', audioStream, {
+    file_name: path.basename(mp3OutputPath),
+    type: 'audio/mpeg',
+  });
+
+  return axios.post(WHISPER_ENDPOINT, audioForm, {
+    params: {
+      task: 'transcribe',
+      language: 'en',
+      output: 'json',
+    },
+    headers: {
+      ...audioForm.getHeaders(),
+      'Content-Type': 'multipart/form-data'
+    },
+  });
+}
 
 let server;
 try {
