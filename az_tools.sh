@@ -1,11 +1,13 @@
 az storage file list --share-name $FILE_VOLUME_SHARE_NAME --account-name $FILE_VOLUME_ACCOUNT_NAME --path ssl --output table
 
-az container logs --resource-group $RESOURCE_GROUP --container-name $CONTAINER_NAME_SERVER --name narclab-audio-recording-backend --follow
+az container logs --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME_CLIENT --container-name $CONTAINER_NAME_CLIENT --follow
 
 az container show --name $CONTAINER_NAME_SERVER --resource-group $RESOURCE_GROUP
 
 sudo mount -t cifs $FILE_VOLUME_ACCOUNT_NAME.file.core.windows.net/$FILE_VOLUME_SHARE_NAME /mnt/myshare -o vers=3.0,username=$FILE_VOLUME_ACCOUNT_NAME,password=$FILE_VOLUME_ACCOUNT_KEY,dir_mode=0777,file_mode=0777
 
+# add file as a secret volume
+az keyvault secret set --vault-name $KEYVAULT_NAME --name nginxconfig --file ./nginx.conf
 
 az container attach --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME_CLIENT
 

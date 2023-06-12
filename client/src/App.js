@@ -108,7 +108,7 @@ function App() {
       console.log("serverEndpoint var detected");
       console.log("Executing config promise");
       Promise.all([
-        fetch(`${serverEndpoint}/config/pageOptions.json`)
+        fetch(`${serverEndpoint}/api/config/pageOptions.json`)
           .then((response) => {
             if (!response.ok) {
               throw new Error("Failed to fetch page options");
@@ -124,7 +124,7 @@ function App() {
             console.error("Error loading page options:", error);
           }),
 
-        fetch(`${serverEndpoint}/config/studyOptions.json`)
+        fetch(`${serverEndpoint}/api/config/studyOptions.json`)
           .then((response) => {
             if (!response.ok) {
               throw new Error("Failed to fetch study options");
@@ -141,7 +141,7 @@ function App() {
           }),
 
         // Fetch sessionOptions.json
-        fetch(`${serverEndpoint}/config/sessionOptions.json`)
+        fetch(`${serverEndpoint}/api/config/sessionOptions.json`)
           .then((response) => {
             if (!response.ok) {
               throw new Error("Failed to fetch session options");
@@ -156,7 +156,7 @@ function App() {
             console.error("Error loading session options:", error);
           }),
 
-        fetch(`${serverEndpoint}/config/taskOptions.json`)
+        fetch(`${serverEndpoint}/api/config/taskOptions.json`)
           .then((response) => {
             if (!response.ok) {
               throw new Error("Failed to fetch task options");
@@ -402,10 +402,10 @@ function App() {
   // Send file to server
   const uploadAudio = async (formData) => {
     try {
-      console.log("Uploading audio file to server (/uploads)");
+      console.log("Uploading audio file to server (/api/upload)");
 
       // Send formData to the server
-      const response = await fetch(`${serverEndpoint}/uploads`, {
+      const response = await fetch(`${serverEndpoint}/api/upload`, {
         method: "POST",
         body: formData,
       });
@@ -430,13 +430,44 @@ function App() {
     }
   };
 
+  // Send file to server
+  const transcribeAudio = async (formData) => {
+    try {
+      console.log("Sending file to whisper asr webservice");
+
+      // Send formData to the server
+      const response = await fetch(`${serverEndpoint}/whisper/asr`, {
+        method: "POST",
+        body: formData,
+      });
+
+      // look for response from the server with json data
+      if (response.ok) {
+        const data = await response.json();
+        console.log("fetched json data: ", data);
+        // if (data.url && data.filename) {
+        //   const mp3Download = serverEndpoint + data.url;
+        //   setMp3Url(mp3Download);
+        //   setMp3Filename(data.filename);
+        //   console.log("Path to mp3 file: ", mp3Download);
+        // } else {
+        //   throw new Error("Received data does not contain url or filename.");
+        // }
+      } else {
+        throw new Error("Server response from whisper was not OK.");
+      }
+    } catch (error) {
+      console.error("Error transcribing the audio file:", error);
+    }
+  };
+
   const checkTranscript = async () => {
     try {
       const jsonFile = `${mp3Filename}`.replace(".mp3", ".json");
-      const res = await fetch(`${serverEndpoint}/transcripts/${jsonFile}`);
+      const res = await fetch(`${serverEndpoint}/api/transcripts/${jsonFile}`);
 
       if (res.ok) {
-        const jsonUrl = `${serverEndpoint}/transcripts/${jsonFile}`;
+        const jsonUrl = `${serverEndpoint}/api/transcripts/${jsonFile}`;
         setTranscriptUrl(jsonUrl);
         setTranscriptFilename(jsonFile);
         setJsonLoading(false);
@@ -446,33 +477,6 @@ function App() {
       }
     } catch (err) {
       console.error("Error fetching JSON:", err.stack);
-    }
-  };
-
-  const downldTranscript = async () => {
-    try {
-      const res = await fetch(
-        `${serverEndpoint}/transcripts/${mp3Filename}.replace('.mp3', '.json')`
-      );
-      if (res.ok) {
-        const jsonBlob = await res.blob();
-        const jsonUrl = URL.createObjectURL(jsonBlob);
-
-        // Create a link to download the JSON file
-        const link = document.createElement("a");
-        link.href = jsonUrl;
-        link.download = `${filename}.json`;
-        link.click();
-        setJsonLoading(false);
-        console.log("Finished loading transcript");
-      } else {
-        console.error(
-          "Error downloading the JSON file. response.ok false: ",
-          res
-        );
-      }
-    } catch (err) {
-      console.error("Error downloading JSON:", err.stack);
     }
   };
 
@@ -555,10 +559,18 @@ function App() {
 
   const handleUpload = async () => {
     if (selectedFile) {
-      const formData = createFormData(selectedFile);
+      const audioForm = new FormData();
+      audioForm.append("file", selectedFile, {
+        filename: selectedFile,
+        contentType: "audio/mpeg",
+      });
+      audioForm.append("task", "transcribe");
+      audioForm.append("language", "en");
+      audioForm.append("output", "json");
+
       console.log("Uploading file:", selectedFile);
       setUploading(true);
-      await uploadAudio(formData);
+      await transcribeAudio(audioForm);
       setUploading(false);
       setSelectedFile(null);
     } else {
@@ -857,25 +869,24 @@ function App() {
                     name="file"
                     onChange={(event) => {
                       const fileList = event.target.files;
-                      const uploadAudio = fileList[0];
-                      setSelectedFile(uploadAudio);
+                      const audioFile = fileList[0];
+                      setSelectedFile(audioFile);
                     }}
                   />
-                  {selectedFile ||
-                    (uploading && (
-                      <Button
-                        label={
-                          uploading
-                            ? "Transferring..."
-                            : selectedFile
-                            ? "Upload"
-                            : "Nothing selected"
-                        }
-                        onClick={() => {
-                          handleUpload();
-                        }}
-                      />
-                    ))}
+                  {(selectedFile || uploading) && (
+                    <Button
+                      label={
+                        uploading
+                          ? "Transferring..."
+                          : selectedFile
+                          ? "Transcribe"
+                          : "Click above to add a file"
+                      }
+                      onClick={() => {
+                        handleUpload();
+                      }}
+                    />
+                  )}
                   {mp3Url && (
                     <Button
                       label={
