@@ -83,7 +83,7 @@ function App() {
   const [mp3Filename, setMp3Filename] = useState(null);
 
   useEffect(() => {
-    fetch("/config/serverOptions.json")
+    fetch("/config")
       .then((response) => response.json())
       .then((config) => {
         // You have your configuration here
@@ -106,7 +106,7 @@ function App() {
 
     if (serverEndpoint) {
       console.log("serverEndpoint var detected");
-      console.log("Executing config promise");
+      console.log(`Executing config promise to"${serverEndpoint}`);
       Promise.all([
         fetch(`${serverEndpoint}/api/config/pageOptions.json`)
           .then((response) => {
@@ -349,10 +349,10 @@ function App() {
     if (ver) {
       verPart = `_v-${ver}`;
     }
-    let filename = `sub-${study}${subj.replace(
-      "S",
-      ""
-    )}_ses-${sesType}${sesNum}_task-${task}${verPart}${acqPart}${datetime}_audio`;
+    let filename = `sub-${subj.replace(
+      "s",
+      "S"
+    )}${study}_ses-${sesType}${sesNum}_task-${task}${verPart}${acqPart}${datetime}_audio`;
 
     console.log(`Generated new filename: ${filename}`);
     return filename;

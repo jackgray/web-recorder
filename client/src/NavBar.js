@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Box, Button, Text } from "grommet";
+import { Box, Button, Text, Image  } from "grommet";
 import { Moon, Sun } from "grommet-icons";
 
 const NavBar = ({ darkMode, toggleDarkMode, header }) => {
@@ -11,11 +11,15 @@ const NavBar = ({ darkMode, toggleDarkMode, header }) => {
       background={darkMode ? "dark-1" : "light-1"}
       elevation="medium"
       pad={{ horizontal: "medium", vertical: "small" }}
-    >
-      <Text size="large">{header}</Text>
+    > 
+      <Box direction="row" align="center" gap="small">
+        <Image src="favicon.ico" width="72px" height="72px" /> {/* Adjust size if needed */}
+        <Text size="large">{header}</Text>
+      </Box>
       <Button icon={darkMode ? <Moon /> : <Sun />} onClick={toggleDarkMode} />
     </Box>
   );
 };
 
 export default NavBar;
+

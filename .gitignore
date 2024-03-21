@@ -5,3 +5,8 @@ server/node_modules
 app.yaml
 client.yaml
 server.yaml
+
+.env
+**/.env
+data/audio
+data/uploads

@@ -18,8 +18,5 @@ RUN npm install
 # Copy app source code
 COPY . .
 
-# Expose port 443
-EXPOSE 443
-
 # Start the app
 CMD [ "node", "src/server.js" ]

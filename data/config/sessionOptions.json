@@ -1,0 +1,26 @@
+[
+    {
+      "label": "Screening Day",
+      "value": "sd"
+    },
+    {
+      "label": "tDCS Day",
+      "value": "tdcs"
+    },
+    {
+      "label": "MRI Day",
+      "value": "mri"
+    },
+    {
+      "label": "Task Day",
+      "value": "td"
+    },
+    {
+      "label": "EEG Day",
+      "value": "eeg"
+    },
+    {
+      "label": "EMA",
+      "value": "ema"
+    }
+  ]

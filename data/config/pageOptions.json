@@ -1,0 +1,14 @@
+[
+    {
+      "header": "NARC Audio Recorder"
+    },
+    {
+      "subheader": "Instructions: Reload the page before making a second recording, and/or make sure the datetime field in the file label is updated! Use a laptop with Firefox or Chrome browser whenever possible (mobile devices and Safari should work if necessary).\n\n\n Confirm that the recording was successful by downloading the file and playing it back. If you do not see an option to download, the file was likely not saved. Contact your system administrator."
+    },
+    {
+      "description": "Use only one microphone and do not speak during the recording. There is no need to provide an intro. Check the file name at the bottom to make sure it is labeled correctly--this app is experimental and meant to assist; as the data collector you are ultimately responsible for proper labeling."
+    },
+    {
+      "footer": ""
+    }
+]

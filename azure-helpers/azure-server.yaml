@@ -1,0 +1,46 @@
+apiVersion: '2019-12-01'
+location: eastus
+name: "${CONTAINER_NAME_SERVER}"
+properties:
+  containers:
+    - name: "${CONTAINER_NAME_SERVER}"
+      properties:
+        environmentVariables:
+          - name: CLIENT_ENDPOINT
+            value: '${CLIENT_ENDPOINT}'
+          - name: SERVER_ENDPOINT
+            value: "${SERVER_ENDPOINT}"
+          - name: SERVER_PORT
+            value: "${SERVER_PORT}"
+        image: "${DOCKER_IMAGE_SERVER}"
+        ports:
+          - port: 443
+        resources:
+          requests:
+            cpu: 1.0
+            memoryInGB: 1.5
+        volumeMounts:
+          - mountPath: /app/data
+            name: "${FILE_VOLUME_SHARE_NAME}"
+      dependsOn:
+        - name: "${CONTAINER_NAME_WHISPER}"
+    - name: "${CONTAINER_NAME_WHISPER}"
+      properties:
+        image: "${DOCKER_IMAGE_WHISPER}"
+        resources:
+          requests:
+            cpu: 1.0
+            memoryInGB: 1.5
+        ports:
+          - port: ${WHISPER_PORT}
+  osType: Linux
+  restartPolicy: Always
+ 
+  volumes:
+    - name: "${FILE_VOLUME_SHARE_NAME}"
+      azureFile:
+        sharename: acishare
+        storageAccountName: "${FILE_VOLUME_ACCOUNT_NAME}"
+        storageAccountKey: "${FILE_VOLUME_ACCOUNT_KEY}"
+tags: {}
+type: Microsoft.ContainerInstance/containerGroups

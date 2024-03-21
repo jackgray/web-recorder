@@ -1,22 +1,29 @@
-## Web Based Audio Recording
+# Web Based Audio Recording
 
 Record audio from a web browser and label them in Brain Imaging Data Structure (BIDS)
+
+![audio-gif](./gifs/audio-web-recorder.gif)
 
 Converts .webm, .ogg, and all other formats to .mp3 and saves the mp3 file to the server at /app/data/audio and to the user's host machine. 
 
 This app is comprised of two docker containers, and tested to work with Azure Container Instances, although any host with a storage volume to mount to the container should work.
 
-### Configuration
+## Configuration
 In the storage volume that you mount, you will need to have the following folders and files:
 
 ```
-/config
-/ssl
-/audio
-/uploads
+/data
+  ./config
+  ./ssl
+  ./audio
+  ./uploads
 ```
 
-`/config`
+### Hot-reloadable site config 
+
+![audio-config-gif][./gifs/audio-web-recorder-hot-reloading]
+
+`/config` 
 
   - studyOptions.json 
 
@@ -37,7 +44,7 @@ In the storage volume that you mount, you will need to have the following folder
 #### Configuration/hosting options
 HTTPS is a requirement for the web recording API, which this program uses. I found proxying the localhost to a registered domain using Cloudflare's Argo Tunnels to be the fastest way to get up and running (and for free), but you may also choose to purchase and manage your own certificates from a certificate authority
 
-##### Manually dealing with CA certificates -- tested and works with Local nginx and Azure container instances
+##### Manually managing CA certificates -- tested and works with Local nginx and Azure container instances
 
 This is the cheapest method I found using CA certs from a certificate authority (also more secure than self-signed certs)
 

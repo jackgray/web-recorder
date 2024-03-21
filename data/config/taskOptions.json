@@ -1,0 +1,77 @@
+[
+  
+  {
+    "label": "Fluency",
+    "value": "fluency"
+  },
+  {
+    "label": "Post-Movie Survey",
+    "value": "movietalk",
+    "acq": [
+      {
+        "label": "On the Outs",
+        "value": "ontheouts"
+      },
+      {
+        "label": "Train Spotting",
+        "value": "trnspttng"
+      },
+      {
+        "label": "Permanent Midnight",
+        "value": "permidnight"
+      },
+      {
+        "label": "Down To The Bone",
+        "value": "downtobone"
+      },
+      {
+        "label": "Breaking Bad",
+        "value": "breakingbad"
+      },
+      {
+        "label": "Dopesick",
+        "value": "dopesick"
+      }
+    ],
+    "prompt": "Please verbally recall the movie you just watched in order, with as much detail as possible. The details are more important than the order. \n\nWhile recounting the movie, please also describe in detail any thoughts or emotions you may have experienced during any of the scenes. \n\nPlease tell us what these emotions and thoughts were exactly, and indicate the specific items in each of the scenes that made you have these feelings/thoughts, and how strong were these feelings/thoughts you experienced for these items. \n\nPlease also verbally indicate when you have finished recalling (e.g.,Im done). We will not interrupt you over the course of your speech; thus, we will not engage in conversation while you are recounting the movie and your feelings/thoughts. \n\n\nAfter recording, head to https://rutgers.ca1.qualtrics.com/jfe/form/SV_dmo01tQelSzYXmS "
+  },
+  {
+    "label": "Freetalk",
+    "value": "freetalk",
+    "acq": [
+      {
+        "label": "Negative Conscequences",
+        "value": "neg",
+        "prompt": "Please speak for 5 minutes about the NEGATIVE consequences of using drugs. Do not mention your name or anyone else's name. You can talk about anything that comes to mind in as much detail as you want. Example topics might include negative consequences on Mental or physical health, relationships with family, friends, or community, or job/career or ability to make or save money."
+
+      },
+      {
+        "label": "Positive Conscequences",
+        "value": "pos",
+        "prompt": "Please speak for 5 minutes about the POSITIVE effects of quitting or reducing use of drugs."
+
+      }
+    ],
+    "prompt": "Please speak for 5 minutes about the NEGATIVE consequences of using drugs. Do not mention your name or anyone else's name. You can talk about anything that comes to mind in as much detail as you want. Example topics might include negative consequences on Mental or physical health, relationships with family, friends, or community, or job/career or ability to make or save money. Then speak for 5 minutes about the POSITIVE effects of quitting or reducing use of drugs."
+  },
+  {
+    "label": "Post-Stimulation (tDCS Talk)",
+    "value": "tdcstalk",
+    "prompt": "Please verbally recall any thoughts you were having during the stimulation session."
+  },
+  {
+    "label": "CVLT",
+    "value": "cvlt",
+    "ver": [
+      {
+        "label": "Alternate",
+        "value": "alt"
+      },
+      {
+        "label": "Standard",
+        "value": "std"
+      }
+    ],
+    "prompt": "I'm going to read a list of words to you. Listen carefully, because when I'm through, I want you to tell me as many of the words as you can. You can say them in any order, just say as many of them as you can. Are you ready? *Read List A at an even pace, taking slightly longer than one second per word, so the entire list takes 18 to 20 seconds. Then say 'Go ahead.'"
+  }
+]
