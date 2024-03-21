@@ -1,6 +1,6 @@
 # Web Based Audio Recording
 
-Record audio from a web browser and label them in Brain Imaging Data Structure (BIDS)
+Record audio from a web browser and label files in Brain Imaging Data Structure (BIDS)
 
 ![audio-gif](./gifs/audio-web-recorder.gif)
 
@@ -21,7 +21,7 @@ In the storage volume that you mount, you will need to have the following folder
 
 ### Hot-reloadable site config 
 
-![audio-config-gif][./gifs/audio-web-recorder-hot-reloading.gif]
+![audio-config-gif](./gifs/audio-web-recorder-hot-reloading.gif)
 
 `/config` 
 
