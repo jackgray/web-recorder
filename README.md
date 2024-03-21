@@ -31,7 +31,7 @@ In the storage volume that you mount, you will need to have the following folder
 
   - sessionOptions.json - 
 
-    - same as studyOptions but for varying types of sessions. Could be left blank to result in a session label of just the number (but is helpful for tracking data to be paired with MRI sessions vs EEG or purely psycometric task days)
+    - same as studyOptions but for varying types of sessions. Could be left blank to result in a session label of just the number (but is helpful for tracking data to be paired with MRI sessions vs EEG or purely psychometric task days)
 
   - taskOptions.json 
   
