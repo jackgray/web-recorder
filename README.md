@@ -21,7 +21,7 @@ In the storage volume that you mount, you will need to have the following folder
 
 ### Hot-reloadable site config 
 
-![audio-config-gif][./gifs/audio-web-recorder-hot-reloading]
+![audio-config-gif][./gifs/audio-web-recorder-hot-reloading.gif]
 
 `/config` 
 
